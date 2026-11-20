@@ -48,7 +48,13 @@ def check_hook(tool):
                     got = f"bad output, exit {result.returncode}"
                 ok = result.returncode == 0 and got == expect
             else:
-                got = {2: "deny", 0: "allow"}.get(result.returncode, f"exit {result.returncode}")
+                err = result.stderr.decode("utf-8", errors="replace")
+                if result.returncode == 2 and ("Blocked by the ai-global-config guard" in err or "The ai-global-config guard protects" in err):
+                    got = "deny"
+                elif result.returncode == 0:
+                    got = "allow"
+                else:
+                    got = f"exit {result.returncode}"
                 ok = got == expect
             print(f"{'PASS' if ok else 'FAIL'} hook {expect} probe: got {got}")
             failures += not ok
@@ -59,6 +65,8 @@ def check_hook(tool):
 if len(sys.argv) == 3 and sys.argv[1] == "--hook" and sys.argv[2] in CONFIGS:
     sys.exit(check_hook(sys.argv[2]))
 guard = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "guard.py")
+with open(guard, "rb"):
+    pass
 
 
 def verdict(fmt, payload):
@@ -69,7 +77,10 @@ def verdict(fmt, payload):
         timeout=30,
     )
     if result.returncode == 2:
-        return "deny"
+        err = result.stderr.decode("utf-8", errors="replace")
+        if fmt != "agy" and ("Blocked by the ai-global-config guard" in err or "The ai-global-config guard protects" in err):
+            return "deny"
+        return f"error {result.returncode}"
     if result.returncode != 0:
         return f"error {result.returncode}"
     out = result.stdout.decode("utf-8", errors="replace").strip()
