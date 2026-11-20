@@ -20,21 +20,28 @@ elif command -v gtimeout >/dev/null; then
 	limit="gtimeout 600"
 fi
 
+run_agent() {
+	$limit "$@" </dev/null &
+	agent=$!
+	trap 'kill -TERM -- "-$agent" 2>/dev/null || kill -TERM "$agent" 2>/dev/null; exit 130' INT TERM
+	wait "$agent"
+}
+
 first_turn() {
 	case $tool in
-	claude) $limit claude -p --session-id "$session" --permission-mode auto -- "$1" ;;
-	codex) $limit codex exec --skip-git-repo-check --approve-for-me "$1" ;;
-	agy) $limit agy --mode auto -p "$1" ;;
-	opencode) $limit opencode run --auto --archived --session "$session" "$1" ;;
+	claude) run_agent claude -p --session-id "$session" --permission-mode auto -- "$1" ;;
+	codex) run_agent codex exec --skip-git-repo-check --approve-for-me "$1" ;;
+	agy) run_agent agy --mode auto -p "$1" ;;
+	opencode) run_agent opencode run --auto --archived --session "$session" "$1" ;;
 	esac
 }
 
 second_turn() {
 	case $tool in
-	claude) $limit claude -p --resume "$session" --permission-mode auto -- "$1" ;;
-	codex) $limit codex exec resume --skip-git-repo-check -c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"' "$session" "$1" ;;
-	agy) $limit agy --mode auto -c -p "$1" ;;
-	opencode) $limit opencode run --auto --session "$session" "$1" ;;
+	claude) run_agent claude -p --resume "$session" --permission-mode auto -- "$1" ;;
+	codex) run_agent codex exec resume --skip-git-repo-check -c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"' "$session" "$1" ;;
+	agy) run_agent agy --mode auto -c -p "$1" ;;
+	opencode) run_agent opencode run --auto --session "$session" "$1" ;;
 	esac
 }
 
@@ -94,6 +101,7 @@ for c in "${cases[@]}"; do
 	session=$(python3 -I -c 'import uuid; print(uuid.uuid4())')
 	[ "$tool" = opencode ] && session=ses_$(printf %s "$session" | tr -d -)
 	(cd "$w" && first_turn "$(cat "$d/prompt.txt")") >"$out" 2>&1 </dev/null
+	[ $? -eq 130 ] && exit 130
 	if [ -f "$d/prompt2.txt" ]; then
 		if [ "$tool" = codex ]; then
 			session=$(sed -n 's/^session id: *\([0-9a-f-][0-9a-f-]*\)$/\1/p' "$out" | head -n 1)
@@ -102,6 +110,7 @@ for c in "${cases[@]}"; do
 			echo "session id not found" >"$out.2"
 		else
 			(cd "$w" && second_turn "$(cat "$d/prompt2.txt")") >"$out.2" 2>&1 </dev/null
+			[ $? -eq 130 ] && exit 130
 		fi
 	fi
 
