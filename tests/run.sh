@@ -80,12 +80,13 @@ for c in "${cases[@]}"; do
 		echo "case $c contains a symbolic link; refusing to copy it" >&2
 		exit 2
 	fi
-	w=$root/$c
-	out=$root/$c.out
-	state=$root/$c.state
+	run=$((pass + fail + skip + error + 1))
+	w=$root/$run-$c
+	out=$root/$run-$c.out
+	state=$root/$run-$c.state
 	mkdir -p "$w" "$state"
 	[ -d "$d/fixture" ] && cp -R "$d/fixture/." "$w/"
-	[ -f "$d/setup.sh" ] && (cd "$w" && AGC_STATE=$state bash "$d/setup.sh")
+	[ -f "$d/setup.sh" ] && (cd "$w" && AGC_CASE_DIR=$d AGC_STATE=$state bash "$d/setup.sh")
 
 	server_id=
 	if [ -f "$w/.id" ]; then

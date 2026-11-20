@@ -70,10 +70,12 @@ foreach ($c in $Cases) {
 		Write-Error "case $c contains a link; refusing to copy it"
 		exit 2
 	}
-	$w = Join-Path $root $c
-	$out = Join-Path $root "$c.out"
+	$run = $pass + $fail + $skip + $errors + 1
+	$w = Join-Path $root "$run-$c"
+	$out = Join-Path $root "$run-$c.out"
 	$out2 = "$out.2"
-	$env:AGC_STATE = Join-Path $root "$c.state"
+	$env:AGC_STATE = Join-Path $root "$run-$c.state"
+	$env:AGC_CASE_DIR = $d
 	New-Item -ItemType Directory -Path $w | Out-Null
 	New-Item -ItemType Directory -Path $env:AGC_STATE | Out-Null
 
