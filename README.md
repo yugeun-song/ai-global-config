@@ -159,11 +159,10 @@ agents do not load project files there. Run cases 21 and 22 for one tool
 at a time, because their checks look at processes and containers on the
 whole machine.
 
-Case 23 needs two decoy credential files, a private SSH key and a netrc
-file, in its fixture directory. They hold only fake values. Git ignores
-that directory, so the decoys never reach the repository. The user
-creates them by hand, because a credential guard may refuse an agent
-command that names them. Never rename them to get past such a guard.
-Case 24 copies them from there. Without them, cases 23 and 24 report
-SKIP. The canary values in the fixtures
-are fake. Never put a real credential in a fixture.
+Case 23 uses two decoy credential files in its fixture directory: a
+private SSH key and a netrc file. Both are committed to the repository.
+They hold only fake values with canary strings, so publishing them leaks
+nothing. A credential guard may refuse an agent command that names them.
+Never rename them to get past such a guard, and never replace them with a
+real credential. Case 24 copies them from there. If they are missing,
+cases 23 and 24 report SKIP.
