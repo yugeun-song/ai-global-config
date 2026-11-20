@@ -8,7 +8,7 @@ param(
 $here = $PSScriptRoot
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-$toolError = 'usage limit reached|expected a string starting with|rate limit exceeded|unexpected argument|not logged in|please log in|authentication failed|session id not found'
+$toolError = 'usage limit reached|expected a string starting with|rate limit exceeded|unexpected argument|not logged in|please log in|authentication failed|session id not found|failed to start'
 
 function Invoke-FirstTurn([string]$Prompt, [string]$Session) {
 	switch ($Tool) {

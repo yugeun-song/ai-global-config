@@ -11,7 +11,7 @@ claude | codex | agy | opencode) shift ;;
 	;;
 esac
 
-tool_error='usage limit reached|expected a string starting with|rate limit exceeded|unexpected argument|not logged in|please log in|authentication failed|session id not found'
+tool_error='usage limit reached|expected a string starting with|rate limit exceeded|unexpected argument|not logged in|please log in|authentication failed|session id not found|failed to start'
 
 limit=
 if command -v timeout >/dev/null; then
