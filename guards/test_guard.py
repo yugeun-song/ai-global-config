@@ -5,6 +5,59 @@ import sys
 import time
 
 here = os.path.dirname(os.path.abspath(__file__))
+CONFIGS = {
+    "claude": os.path.join("~", ".claude", "settings.json"),
+    "codex": os.path.join(os.environ.get("CODEX_HOME") or os.path.join("~", ".codex"), "hooks.json"),
+    "agy": os.path.join("~", ".gemini", "config", "hooks.json"),
+}
+PROBES = {
+    "claude": ({"tool_name": "Bash", "tool_input": {"command": "cat ~/.netrc"}}, {"tool_name": "Bash", "tool_input": {"command": "ls"}}),
+    "codex": ({"tool_name": "Bash", "tool_input": {"command": "cat ~/.netrc"}}, {"tool_name": "Bash", "tool_input": {"command": "ls"}}),
+    "agy": ({"toolCall": {"name": "run_command", "args": {"CommandLine": "cat ~/.netrc"}}}, {"toolCall": {"name": "run_command", "args": {"CommandLine": "ls"}}}),
+}
+
+
+def hook_commands(value):
+    if isinstance(value, dict):
+        command = value.get("command")
+        if isinstance(command, str) and "ai-global-config-guard.py" in command:
+            yield command
+        for item in value.values():
+            yield from hook_commands(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from hook_commands(item)
+
+
+def check_hook(tool):
+    path = os.path.expanduser(CONFIGS[tool])
+    with open(path, encoding="utf-8") as config:
+        commands = list(dict.fromkeys(hook_commands(json.load(config))))
+    if not commands:
+        print(f"FAIL: {path} holds no ai-global-config guard hook")
+        return 1
+    failures = 0
+    for command in commands:
+        for expect, event in zip(("deny", "allow"), PROBES[tool]):
+            result = subprocess.run(command, shell=True, input=json.dumps(event).encode("utf-8"), capture_output=True, timeout=30)
+            out = result.stdout.decode("utf-8", errors="replace").strip()
+            if tool == "agy":
+                try:
+                    got = json.loads(out).get("decision")
+                except ValueError:
+                    got = f"bad output, exit {result.returncode}"
+                ok = result.returncode == 0 and got == expect
+            else:
+                got = {2: "deny", 0: "allow"}.get(result.returncode, f"exit {result.returncode}")
+                ok = got == expect
+            print(f"{'PASS' if ok else 'FAIL'} hook {expect} probe: got {got}")
+            failures += not ok
+    print(f"{path}: {len(commands)} hook command(s), {failures} failed")
+    return 1 if failures else 0
+
+
+if len(sys.argv) == 3 and sys.argv[1] == "--hook" and sys.argv[2] in CONFIGS:
+    sys.exit(check_hook(sys.argv[2]))
 guard = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "guard.py")
 
 

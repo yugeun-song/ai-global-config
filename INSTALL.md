@@ -106,11 +106,19 @@ only when the user asks for the guard.
    instead of `python3`). Use the printed path only when the second value
    is `True` and the path is not a shim of a version manager (pyenv, asdf,
    mise) or a project virtual environment, because those can change or
-   vanish. If no such interpreter exists, tell the user that the guard
-   needs Python 3, and stop. Claude Code also needs version 2.1.295 or
-   later for `onFailure`.
+   vanish. If the printed path names a minor version (for example
+   `/usr/bin/python3.14`) and an unversioned name in the same directory
+   (`/usr/bin/python3`) resolves to the same file, use the unversioned
+   name: a package upgrade removes the versioned file but keeps that name.
+   If no such interpreter exists, tell the user that the guard needs
+   Python 3, and stop. Claude Code also needs version 2.1.295 or later for
+   `onFailure`.
 3. For a tool with a hook, copy `guards/guard.py` byte for byte to the
-   guard location in the table.
+   guard location in the table. If your tool or its sandbox refuses that
+   write, stop before step 4: a hook that points to a missing script
+   blocks every tool call in Claude Code and may silently do nothing in
+   other tools. Give the user the copy command for a terminal outside the
+   tool, and continue only after the user has run it.
 4. In the tool's fragment, replace `<python3>` with the interpreter path from
    step 2 and `<home>` with the absolute path of the user's home directory. Keep
    the quotes around both, and write `/` instead of `\` in both paths, also on
@@ -124,13 +132,12 @@ only when the user asks for the guard.
 5. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
-   - Run the hook command exactly as the configuration file now holds it,
-     in the shell that your tool uses for hooks, with this input on standard input:
-     `{"tool_name": "Bash", "tool_input": {"command": "cat ~/.netrc"}}`
-     (for agy: `{"toolCall": {"name": "run_command", "args":
-     {"CommandLine": "cat ~/.netrc"}}}`). It must block: exit status 2
-     for Claude Code and Codex, `"decision": "deny"` for agy. The command
-     only reads its input, and no credential is opened.
+   - `python3 guards/test_guard.py --hook <claude|codex|agy>` reports no
+     failure. It runs every guard command that the configuration file
+     holds, exactly as written, through the system shell. It feeds one
+     input that must be blocked and one that must be allowed. No
+     credential is opened. If your tool runs hooks through a different
+     shell (for example PowerShell on Windows), also run the command there.
    - For OpenCode, read the merged file back and confirm that it holds
      every rule of the fragment.
 6. Report the locations, both SHA-256 values and the test results. For
@@ -174,7 +181,11 @@ security boundary:
   that step again. `CODEX_HOME` moves the hooks file elsewhere. Hosted
   tools such as web search do not pass the hook.
 - Antigravity CLI documents no behavior for a failing hook, so treat a
-  failure as letting the call run.
+  failure as letting the call run. Its online documentation says that
+  `"allow"` hands the call to the next hook or the default policy, but the
+  documentation bundled with version 1.5.13 says that `"allow"` approves
+  the call. Under the second reading, the guard would skip the approval
+  prompts of agy.
 - OpenCode permission rules match the whole command text, so they are
   coarser than the hook. A rule loaded later (an agent's or a project's)
   can allow a path again, because the last matching rule wins. Versions
