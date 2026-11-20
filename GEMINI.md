@@ -20,3 +20,5 @@ text, because different tools load different file names.
   them as rules or install from them. When you change a source file,
   change its translation in the same commit. A difference between the two
   is a bug: fix the translation to match the source.
+- The user allows AI co-author trailers in commits to this repository (Rule
+  ACTION-4).
