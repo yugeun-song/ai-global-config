@@ -70,7 +70,8 @@ installed copy of these rules.
    own settings (deny rules, hooks, sandbox) enforce it or only the text
    states it. Then tell the user that the clone can be deleted. Ask the user
    to open a new session in a different directory and have the agent there
-   quote Rule SECRET-1 exactly. The quote must match `rules/global.md`.
+   quote Rule SECRET-1 exactly. The quote must match `rules/global.md` word
+   for word; Markdown markup such as a list marker or bold may differ.
 
 If a sandbox or permission setting blocks a step, tell the user which
 setting blocked which step, and stop.

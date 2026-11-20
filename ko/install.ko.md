@@ -59,7 +59,8 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
    1부의 규칙 그룹마다 도구 자체 설정(deny 규칙, hook, sandbox)으로 강제했는지 아니면 글로만
    적혀 있는지입니다. 그다음 clone을 지워도 된다고 알립니다. 사용자에게, 다른 디렉터리에서 새
    세션을 열고 그 세션의 에이전트가 Rule SECRET-1을 그대로 인용하게 해 보라고 요청합니다.
-   인용문은 `rules/global.md`와 같아야 합니다.
+   인용문은 `rules/global.md`와 낱말 단위로 같아야 합니다. 목록 기호나 굵은 글씨 같은 Markdown
+   표기는 달라도 됩니다.
 
 sandbox나 권한 설정이 어떤 단계를 막으면, 어느 설정이 어느 단계를 막았는지 사용자에게 알리고
 멈춥니다.

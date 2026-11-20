@@ -78,8 +78,10 @@ load the same text.
   after the user confirms. You cannot delete what you already sent to a model
   provider: tell the user so.
 - **Rule SECRET-5.** NEVER browse another agent's configuration or state
-  directory. Share information that other agents need only through the
-  project itself (Rule AGENT-6).
+  directory on your own. When the user asks you to check a specific file
+  there, read only that file, and never a credential (Rule SECRET-1). Share
+  information that other agents need only through the project itself (Rule
+  AGENT-6).
 
 ### ACTION: actions with lasting effect
 
@@ -344,7 +346,9 @@ rule, not the example.
   system, Linux kernel work, tracing and profiling (ftrace, perf), and
   systems programming that measures the host. Containers run Linux, so also
   run on the host any build or test that must run on the host's own
-  operating system, such as macOS or Windows.
+  operating system, such as macOS or Windows. When your tool's sandbox
+  keeps you from the engine, ask the user whether to run it outside the
+  sandbox.
 - **Rule CONTAINER-2.** When both are installed, use podman. Use docker only
   when podman is missing or unusable. If the engine's daemon, or on macOS
   and Windows its virtual machine, is not running, ask the user before you
@@ -480,8 +484,9 @@ rule, not the example.
   remove credentials and critical personal data (Rules SECRET-1 and
   SECRET-3), and replace values that identify a person, an account, a
   device or a place with a placeholder such as `<hostname>`.
-- **Rule AGENT-5.** Give every progress or status note an expiry date. Leave
-  durable facts (root causes, irreversible traps, measured hardware behavior)
+- **Rule AGENT-5.** When you save a progress or status note as a record, give
+  it an expiry date. A chat message is not such a record. Leave durable
+  facts (root causes, irreversible traps, measured hardware behavior)
   without one.
 - **Rule AGENT-6.** Let the work be its own record, just as code should aim to
   explain itself without comments. The project, its git history and its

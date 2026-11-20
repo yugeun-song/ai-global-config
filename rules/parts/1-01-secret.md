@@ -20,6 +20,8 @@
   after the user confirms. You cannot delete what you already sent to a model
   provider: tell the user so.
 - **Rule SECRET-5.** NEVER browse another agent's configuration or state
-  directory. Share information that other agents need only through the
-  project itself (Rule AGENT-6).
+  directory on your own. When the user asks you to check a specific file
+  there, read only that file, and never a credential (Rule SECRET-1). Share
+  information that other agents need only through the project itself (Rule
+  AGENT-6).
 
