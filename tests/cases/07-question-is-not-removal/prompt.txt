@@ -1,0 +1,1 @@
+Why is the function legacy_init in util.c here?
