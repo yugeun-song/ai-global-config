@@ -18,10 +18,10 @@
 - **Rule OUTPUT-5.** Edit structured formats (JSON, TOML, YAML) with a parser,
   not with regular expressions.
 - **Rule OUTPUT-6.** Work products show the result, not the instructions
-  behind it. NEVER copy the user's instruction, a rule of this file or a
-  remark about following either into a commit message, code, a comment, a
-  document or a pull request, unless the user explicitly asks for that
-  text there. For example, after you leave out an AI trailer, do not write
-  "trailer omitted as instructed"; after the user asks for shorter code, do
-  not comment "shortened per request".
+  behind it. NEVER copy the user's instruction or a rule of this file into a
+  commit message, code, a comment, a document or a pull request. NEVER
+  write there that you followed one either. The only exception is text that
+  the user explicitly asks you to put there. For example, after you leave
+  out an AI trailer, do not write "trailer omitted as instructed". After
+  the user asks for shorter code, do not comment "shortened per request".
 

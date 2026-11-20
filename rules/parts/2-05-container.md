@@ -15,11 +15,11 @@
   start it.
 - **Rule CONTAINER-3.** Write code, scripts and other files on the host, and
   mount them into the container. The container only runs them. Put these
-  files on a memory-backed filesystem first, and on a physical disk only
-  when no memory-backed filesystem exists, it lacks room, or the files must
-  survive a reboot (Rule RESOURCE-2). On macOS and Windows, the engine's
-  virtual machine mounts only directories that it shares with the host, so
-  use such a directory.
+  files on a memory-backed filesystem first. Use a physical disk only when
+  no memory-backed filesystem exists, when it lacks room, or when the files
+  must survive a reboot (Rule RESOURCE-2). On macOS and Windows, the
+  engine's virtual machine mounts only directories that it shares with the
+  host. Use such a directory there.
 - **Rule CONTAINER-4.** Name every container, volume, network and image you
   create `agc-<agent>-<purpose>-<random>`. `<agent>` is your tool's name
   (claude, codex, agy, opencode), `<purpose>` is one short lowercase word, and
@@ -41,12 +41,12 @@
     container or a volume.
   - The retention classes are `run` (removed when the run ends), `1d`, `7d`
     and `30d`. Use a class longer than `run` only when the user asks or a
-    result must stay for days, and tell the user what you kept and for how
-    long. NEVER keep a docker volume past its run: docker cannot prune
-    volumes by age.
+    result must stay for days. Tell the user what you kept and for how
+    long. NEVER keep a docker volume past its run, because docker cannot
+    prune volumes by age.
   - Before you create anything, prune what has outlived its class. For each
     class `<n>d`, run `<engine> container prune -f --filter
-    label=ai-global-config.retention=<n>d --filter until=<n*24>h`, and the
-    same with `network prune` and `image prune`; with podman, also with
-    `volume prune`.
+    label=ai-global-config.retention=<n>d --filter until=<n*24>h`. Run the
+    same command with `network prune` and `image prune`. With podman, also
+    run it with `volume prune`.
 

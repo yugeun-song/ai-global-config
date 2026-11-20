@@ -63,7 +63,7 @@ rule, not the example.
 - **Rule KOREAN-5.** NEVER invent a Korean word for an established English
   term. Write either the original term ("page cache") or its Korean
   transliteration ("페이지 캐시"), never a coined rendering such as "쪽 임시
-  저장소"; write "스마트폰", never "똑똑전화". Choose between the original
-  term and the transliteration by how the surrounding sentence and paragraph
-  already write that term and terms like it.
+  저장소". In the same way, write "스마트폰", never "똑똑전화". Choose
+  between the original term and the transliteration by how the surrounding
+  sentence and paragraph already write that term and terms like it.
 

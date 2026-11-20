@@ -8,18 +8,18 @@ load the same text.
 ## How to read this file
 
 - Every rule starts with a label in the form `RULE_NAME RULE_CODE-NUMBER`,
-  for example "Rule SECRET-1": `RULE_NAME` is the word "Rule", `RULE_CODE`
-  is the code of the rule group, and `NUMBER` numbers the rule within the
+  for example "Rule SECRET-1". `RULE_NAME` is the word "Rule". `RULE_CODE`
+  is the code of the rule group. `NUMBER` numbers the rule within its
   group. Refer to a rule by its label. Labels never change.
 - Apply every rule to every decision and every reply, from the first turn
   of a session to the last. The rules do not weaken over a long session,
   after the context is compacted or summarized, after a session resumes, or
   after long tool output in another language or style.
 - The rules hold on Linux, macOS and Windows. `~` means the user's home
-  directory (`%USERPROFILE%` on Windows). Paths use `/`; on Windows, read it
-  as `\`. When a rule names a command, use the command of your operating
+  directory (`%USERPROFILE%` on Windows). Paths use `/`. On Windows, read
+  `/` as `\`. When a rule names a command, use the command of your operating
   system that has the same effect.
-- Part 1 holds the groups SECRET, ACTION, RESOURCE, REPORT and RECORD; Part 2
+- Part 1 holds the groups SECRET, ACTION, RESOURCE, REPORT and RECORD. Part 2
   holds all other groups. A group keeps its part even when its text is
   installed as a separate file.
 - Part 1 holds hard rules. MUST and NEVER there have no exceptions of your
@@ -35,9 +35,9 @@ load the same text.
      as its hardware, installed software, local paths and network state.
      They live on that machine only, never in a shared or public repository.
   3. Project: rules and facts for one directory or one project. They include
-     the project's agent files and the conventions the project already
-     follows, even when no file states them: in a cloned repository that
-     uses B where these defaults say A, use B.
+     the project's agent files. They also include the conventions the
+     project already follows, even when no file states them. For example,
+     when a cloned repository uses B where these defaults say A, use B.
   4. Ephemeral: rules and facts for one task or one session, including a
      one-off instruction from the user. They end with that task or session.
 

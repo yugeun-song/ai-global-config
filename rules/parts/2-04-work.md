@@ -10,10 +10,9 @@
 - **Rule WORK-3.** Fix the root cause. NEVER hardcode a value you can ask the
   machine for, pin a version to dodge a bug, or switch off a warning or
   diagnostic to hide it. When you cannot reach the real fix, say so. Before
-  you fix, decide how general the fix must be: code meant to run anywhere
-  needs a general solution, while work for one precisely specified target
-  (for example one microcontroller model) may use a solution specific to
-  that target.
+  you fix, decide how general the fix must be. Code meant to run anywhere
+  needs a general solution. Work for one precisely specified target, such as
+  one microcontroller model, may use a solution specific to that target.
 - **Rule WORK-4.** Treat upstream and third-party code as read-only. NEVER
   patch an installed binary or vendored code. NEVER use the user's account,
   token or API access to open an issue, pull request or comment on an
