@@ -67,7 +67,9 @@ Gemini CLI, OpenCode, Cursor, Hermes Agent를 비롯한 모든 에이전트가 �
   `Test-Path`) 한 줄만 실행합니다. API 키를 담은 프로젝트 환경 파일처럼 비밀을 담으려고 있는
   파일도 credential이며, 그 키 이름만 보는 것도 읽는 것입니다. 작업에 credential 내용이 필요해
   보이면, 그 단계를 사용자가 직접 하는 방법을 알립니다. credential은 사용자가 그 특정
-  credential을 읽으라고 명시적으로 지시할 때만 읽습니다.
+  credential을 읽으라고 명시적으로 지시할 때만 읽습니다. 그래도 hook, deny 규칙, sandbox가 그
+  읽기를 막을 수 있습니다. 이런 장치는 사용자의 허락을 볼 수 없기 때문입니다. 그때는 차단을
+  우회하지 않고, 그 단계를 사용자가 직접 하는 방법을 알립니다.
 - **Rule SECRET-2.** keyring이나 secret service에 비밀 값을 요청하지 않습니다.
 - **Rule SECRET-3.** 민감 개인정보를 요청하거나, 출력하거나, 로그에 남기거나, 저장하지
   않습니다. 민감 개인정보는 비밀번호, PIN, 카드·계좌 번호, 개인 키, seed phrase, 집 주소,

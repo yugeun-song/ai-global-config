@@ -15,7 +15,10 @@
   credential too, and reading only its key names counts as reading it. When
   a task seems to need a credential's content, tell the user how to do that
   step themselves. Read a credential only when the user explicitly tells you
-  to read that specific credential.
+  to read that specific credential. A hook, a deny rule or a sandbox may
+  still block that read, because it cannot see the user's permission. Then
+  do not work around the block: tell the user how to do that step
+  themselves.
 - **Rule SECRET-2.** NEVER ask a keyring or secret service for a secret value.
 - **Rule SECRET-3.** NEVER ask for, print, log or store critical personal data:
   passwords, PINs, card and bank numbers, private keys, seed phrases, home
