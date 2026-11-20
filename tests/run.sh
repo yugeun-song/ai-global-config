@@ -11,35 +11,115 @@ claude | codex | agy | opencode) shift ;;
 	;;
 esac
 
-run_tool() {
+tool_error='usage limit reached|expected a string starting with|rate limit exceeded|unexpected argument|not logged in|please log in|authentication failed|session id not found'
+
+limit=
+if command -v timeout >/dev/null; then
+	limit="timeout 600"
+elif command -v gtimeout >/dev/null; then
+	limit="gtimeout 600"
+fi
+
+first_turn() {
 	case $tool in
-	claude) claude -p --permission-mode acceptEdits --allowedTools 'Bash(git *)' -- "$1" ;;
-	codex) codex exec --skip-git-repo-check --approve-for-me "$1" ;;
-	agy) agy --mode auto -p "$1" ;;
-	opencode) opencode run --auto "$1" ;;
+	claude) $limit claude -p --session-id "$session" --permission-mode auto -- "$1" ;;
+	codex) $limit codex exec --skip-git-repo-check --approve-for-me "$1" ;;
+	agy) $limit agy --mode auto -p "$1" ;;
+	opencode) $limit opencode run --auto --archived --session "$session" "$1" ;;
+	esac
+}
+
+second_turn() {
+	case $tool in
+	claude) $limit claude -p --resume "$session" --permission-mode auto -- "$1" ;;
+	codex) $limit codex exec resume --skip-git-repo-check -c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"' "$session" "$1" ;;
+	agy) $limit agy --mode auto -c -p "$1" ;;
+	opencode) $limit opencode run --auto --session "$session" "$1" ;;
 	esac
 }
 
 if [ $# -gt 0 ]; then
 	cases=("$@")
 else
-	mapfile -t cases < <(ls "$here/cases")
+	cases=()
+	for c in "$here"/cases/*/; do
+		c=${c%/}
+		cases+=("${c##*/}")
+	done
 fi
 
 root=$(mktemp -d "${TMPDIR:-/tmp}/agc-test-$tool.XXXXXX")
+gitconfig=$root/gitconfig
+printf '[user]\n\tname = agc-test\n\temail = agc-test@localhost\n[commit]\n\tgpgsign = false\n[tag]\n\tgpgsign = false\n' >"$gitconfig"
+export GIT_CONFIG_GLOBAL=$gitconfig GIT_CONFIG_NOSYSTEM=1
+
 pass=0
 fail=0
 skip=0
+error=0
 for c in "${cases[@]}"; do
+	case $c in
+	*[!a-z0-9-]* | -* | "")
+		echo "invalid case name: $c" >&2
+		exit 2
+		;;
+	esac
 	d=$here/cases/$c
+	if [ ! -f "$d/check.sh" ] || [ ! -f "$d/prompt.txt" ]; then
+		echo "no such case: $c" >&2
+		exit 2
+	fi
+	if [ -n "$(find "$d" -type l)" ]; then
+		echo "case $c contains a symbolic link; refusing to copy it" >&2
+		exit 2
+	fi
 	w=$root/$c
 	out=$root/$c.out
-	mkdir -p "$w"
-	[ -d "$d/fixture" ] && cp -a "$d/fixture/." "$w/"
-	[ -f "$d/setup.sh" ] && (cd "$w" && bash "$d/setup.sh")
-	(cd "$w" && timeout 600 bash -c "$(declare -f run_tool); tool=$tool; run_tool \"\$1\"" _ "$(cat "$d/prompt.txt")") >"$out" 2>&1 </dev/null
-	(cd "$w" && bash "$d/check.sh" "$w" "$out")
-	case $? in
+	state=$root/$c.state
+	mkdir -p "$w" "$state"
+	[ -d "$d/fixture" ] && cp -R "$d/fixture/." "$w/"
+	[ -f "$d/setup.sh" ] && (cd "$w" && AGC_STATE=$state bash "$d/setup.sh")
+
+	server_id=
+	if [ -f "$w/.id" ]; then
+		server_id=$(cat "$w/.id")
+		case $server_id in
+		*[!0-9]* | "")
+			echo "case $c wrote an invalid .id" >&2
+			exit 2
+			;;
+		esac
+	fi
+
+	session=$(python3 -I -c 'import uuid; print(uuid.uuid4())')
+	[ "$tool" = opencode ] && session=ses_$(printf %s "$session" | tr -d -)
+	(cd "$w" && first_turn "$(cat "$d/prompt.txt")") >"$out" 2>&1 </dev/null
+	if [ -f "$d/prompt2.txt" ]; then
+		if [ "$tool" = codex ]; then
+			session=$(sed -n 's/^session id: *\([0-9a-f-][0-9a-f-]*\)$/\1/p' "$out" | head -n 1)
+		fi
+		if [ -z "$session" ]; then
+			echo "session id not found" >"$out.2"
+		else
+			(cd "$w" && second_turn "$(cat "$d/prompt2.txt")") >"$out.2" 2>&1 </dev/null
+		fi
+	fi
+
+	if grep -qiE "$tool_error" "$out" "$out.2" 2>/dev/null; then
+		verdict=-1
+	else
+		(cd "$w" && AGC_CASE_DIR=$d AGC_STATE=$state bash "$d/check.sh" "$w" "$out" "$out.2")
+		verdict=$?
+	fi
+	if [ -n "$server_id" ]; then
+		pkill -x -f "sleep $server_id" 2>/dev/null
+	fi
+
+	case $verdict in
+	-1)
+		echo "ERROR $c (the tool did not run as expected; see $out)"
+		error=$((error + 1))
+		;;
 	0)
 		echo "PASS $c"
 		pass=$((pass + 1))
@@ -54,5 +134,5 @@ for c in "${cases[@]}"; do
 		;;
 	esac
 done
-echo "$tool: $pass passed, $fail failed, $skip skipped. Work directories and outputs: $root"
-[ "$fail" -eq 0 ]
+echo "$tool: $pass passed, $fail failed, $skip skipped, $error errors. Work directories and outputs: $root"
+[ "$fail" -eq 0 ] && [ "$error" -eq 0 ]

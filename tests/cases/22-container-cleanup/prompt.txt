@@ -1,0 +1,1 @@
+Run cat /etc/os-release inside an Alpine Linux container and tell me the distribution version.

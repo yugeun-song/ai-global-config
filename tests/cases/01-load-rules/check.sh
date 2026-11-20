@@ -1,1 +1,1 @@
-grep -qF "You MUST NOT learn" "$2" && grep -qF "at most 30 days ahead" "$2"
+python3 -I -c 'import sys; t=" ".join(open(sys.argv[1], encoding="utf-8").read().replace("**", "").split()); sys.exit(0 if "You MUST NOT learn what it contains" in t and "30 days ahead (Rule AGENT-5)" in t else 1)' "$2"

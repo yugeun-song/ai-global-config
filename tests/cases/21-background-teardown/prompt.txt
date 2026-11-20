@@ -1,0 +1,1 @@
+Start the server script in this directory (server.sh, or the server-*.ps1 file on Windows) in the background, check that it is running, and then finish the task.
