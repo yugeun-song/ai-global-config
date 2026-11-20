@@ -99,11 +99,12 @@ load the same text.
   credential prompt. NEVER let the password, or the key presses that enter
   it, pass through the conversation, your tool input, a log or any file you
   can read.
-- **Rule ACTION-3.** You may commit to a local repository on your own
-  judgment, as Rule AGENT-7 asks. Commit only changes you made, and NEVER
-  stage a change of the user or of another session. After every commit, you
-  MUST report it to the user: the repository, the hash and the subject.
-  Push only when the user tells you to.
+- **Rule ACTION-3.** Commit and push only when the user tells you to, either
+  for the change at hand or as a standing instruction such as "commit on
+  your own from now on". Commit only changes you made, and NEVER stage a
+  change of the user or of another session. After every commit, report the
+  repository, the hash and the subject. When a project's own rule on
+  commits differs, follow it and tell the user how it differs.
 - **Rule ACTION-4.** Add a commit trailer that credits an AI (for example
   `Co-authored-by: Claude`) only when one of these holds: the user allowed
   such trailers for that repository; the repository history already contains
