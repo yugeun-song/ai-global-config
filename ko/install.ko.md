@@ -77,3 +77,80 @@ sandbox나 권한 설정이 어떤 단계를 막으면, 어느 설정이 어느 
 | OpenCode | C, `~/.config/opencode/AGENTS.md` 안 | 그 파일 안 |
 | Hermes Agent | C, `~/.hermes/SOUL.md` 안 | 그 파일 안 |
 | Cursor | 사용자가 설정 화면의 User Rules에 글을 붙여 넣음 | 없음 |
+
+## 강제 장치 설치(선택)
+
+규칙은 글입니다. 강제 장치는 credential을 지목하는 도구 호출을 도구가 거부하게 만들고, 강제
+장치 자신이나 hook 설정을 바꾸는 호출 앞에서는 사용자에게 묻게 만듭니다(Rule SECRET-1). 이
+장치는 도구의 공식 문서가 설명하는 사전 hook이나 권한 규칙으로만 동작합니다. 사용자가 강제
+장치를 요청할 때만 시작합니다.
+
+1. 아래 표에서 자기 도구를 찾습니다. 표에 없거나, 도구의 현재 문서에 사전 hook도 권한 규칙도
+   없으면, 그 도구에는 강제 장치를 쓸 수 없다고 사용자에게 알리고 멈춥니다.
+2. hook을 쓰는 도구라면 Python 3 인터프리터의 실제 경로를 찾습니다. `python3 -c "import os,
+   sys; print(os.path.realpath(sys.executable), sys.prefix == sys.base_prefix)"`를 실행합니다
+   (Windows에서는 `python3` 대신 `py -3`이나 `python`). 두 번째 값이 `True`이고, 그 경로가 버전
+   관리 도구(pyenv, asdf, mise)의 shim이나 프로젝트 가상 환경이 아닐 때만 출력된 경로를 씁니다.
+   그런 경로는 바뀌거나 사라질 수 있기 때문입니다. 그런 인터프리터가 없으면, 강제 장치에 Python
+   3가 필요하다고 사용자에게 알리고 멈춥니다. Claude Code는 `onFailure` 때문에 2.1.295 이상이어야
+   합니다.
+3. hook을 쓰는 도구라면 `guards/guard.py`를 표의 판정기 위치에 바이트 그대로 복사합니다.
+4. 도구의 설정 조각에서 `<python3>`를 2단계의 인터프리터 경로로, `<home>`을 사용자 홈
+   디렉터리의 절대 경로로 바꿉니다. 두 경로를 감싼 따옴표는 그대로 두고, Windows에서도 두
+   경로의 `\`를 `/`로 씁니다. 도구가 hook 명령을 PowerShell로 실행하면, 따옴표로 감싼
+   인터프리터 경로 앞에 `&`와 공백 하나를 붙입니다. 그다음 조각을 설정 파일에 합칩니다. 조각의 항목을 기존 항목
+   옆에 추가합니다. 기존 항목은 절대 지우거나 바꾸지 않습니다. 파일에 이미 다른 내용이 있으면,
+   추가할 내용을 정확히 보여 주고 승인을 기다립니다. 원래 내용을 보관해 두고, 합친 파일이
+   JSON(OpenCode는 JSONC)으로 해석되지 않으면 원래 내용으로 되돌립니다.
+5. 강제 장치를 확인합니다.
+   - `python3 guards/test_guard.py <설치한 판정기>`가 실패 없이 끝납니다.
+   - 설치한 판정기의 SHA-256이 `guards/guard.py`의 SHA-256과 같습니다.
+   - 설정 파일에 들어간 hook 명령을 도구가 hook에 쓰는 shell에서 그대로 실행하고, 표준
+     입력으로 다음을 넣습니다.
+     `{"tool_name": "Bash", "tool_input": {"command": "cat ~/.netrc"}}`
+     (agy는 `{"toolCall": {"name": "run_command", "args":
+     {"CommandLine": "cat ~/.netrc"}}}`). 결과는 차단이어야 합니다. Claude Code와 Codex는 종료
+     상태 2, agy는 `"decision": "deny"`입니다. 이 명령은 입력만 읽고, credential은 열지 않습니다.
+   - OpenCode는 합친 파일을 다시 읽어 조각의 규칙이 모두 들어 있는지 확인합니다.
+6. 위치, 두 SHA-256 값, 시험 결과를 보고합니다. Codex라면 사용자에게 Codex에서 `/hooks`를 열어
+   새 hook을 신뢰하도록 요청합니다. Codex는 사용자가 신뢰하기 전까지 새 hook을 건너뜁니다.
+
+| 도구 | 판정기 위치 | 설정 파일 | 설정 조각 |
+|---|---|---|---|
+| Claude Code | `~/.claude/hooks/ai-global-config-guard.py` | `~/.claude/settings.json` | `guards/claude-settings.json` |
+| Codex CLI | `~/.codex/hooks/ai-global-config-guard.py` | `~/.codex/hooks.json` | `guards/codex-hooks.json` |
+| Antigravity CLI (agy) | `~/.gemini/config/hooks/ai-global-config-guard.py` | `~/.gemini/config/hooks.json` | `guards/agy-hooks.json` |
+| OpenCode | 없음: 권한 규칙만 씀 | `~/.config/opencode/opencode.jsonc` | `guards/opencode-permissions.json` |
+
+강제 장치는 실수와 흔한 시도를 막습니다. 완전한 보안 경계는 아닙니다.
+
+- 도구 호출의 글에서 이름을 찾아 판정합니다. 그래서 명령이 glob(`~/.n?trc`), 중괄호 확장, 변수,
+  실행 중에 만든 문자열, 인코딩한 이름, 해석하지 못하는 형태로 바꾼 작업 디렉터리, glob이나 만든
+  문자열 안의 심볼릭 링크, 앞서 쓴 스크립트로 비밀에 닿는 경우는 놓칠 수 있습니다.
+- 존재 확인 예외는 `ls`, `stat`, `test`가 진짜 명령이라고 믿습니다. 같은 이름의 shell 함수나
+  `PATH` 앞쪽의 파일이 있으면 그 확인이 읽기로 바뀔 수 있습니다.
+- 강제 장치 자신과 hook 설정의 보호도 이름으로 판정하므로, 간접적으로 닿는 명령은 막지
+  못합니다.
+- 그런 파일 이름이 들어간 무해한 명령은 막을 수 있습니다. 예를 들어 `.ssh`를 언급하는 commit
+  메시지나 `docker compose --env-file .env`가 그렇습니다.
+- 다른 hook(plugin, skill, 에이전트 정의, 작업 공간 파일에서 온 hook)은 강제 장치가 허용한
+  도구 호출을 나중에 바꿀 수 있습니다.
+- 시간 예산(약 4초)을 다 쓰거나 호출을 해석하지 못하면, 원문 글로 판정하고 애매하면 막습니다.
+- Claude Code: `disableAllHooks`나 `--settings` 덮어쓰기는 강제 장치를 끕니다. `onFailure:
+  "block"` 때문에, 판정기 스크립트가 지워지거나 망가지면 사용자가 hook 항목을 직접 지울 때까지
+  모든 도구 호출이 막힙니다.
+- Codex에는 "묻기" 결정이 없어서, 강제 장치는 자기 파일을 바꾸는 호출을 묻는 대신 막습니다.
+  Codex는 hook이 실패하거나, 시간 초과되거나, 잘못된 형식으로 답하면 도구를 그대로 실행할 수
+  있습니다. 실행 중인 터미널에 나중에 보내는 입력(`write_stdin`)은 hook을 다시 거치지 않습니다.
+  Codex는 새 hook이나 바뀐 hook을 사용자가 `/hooks`에서 신뢰하기 전까지 건너뛰므로, 갱신할
+  때마다 그 단계가 다시 필요합니다. `CODEX_HOME`을 바꾸면 hook 파일 위치도 바뀝니다. 웹 검색 같은 호스팅 도구는 hook을
+  거치지 않습니다.
+- Antigravity CLI는 hook이 실패할 때의 동작을 문서에 밝히지 않습니다. 그래서 실패하면 호출이
+  실행된다고 보고 대합니다.
+- OpenCode 권한 규칙은 명령 글 전체로 일치를 판단하므로 hook보다 거칩니다. 나중에 읽히는
+  규칙(에이전트나 프로젝트의 규칙)이 경로를 다시 허용할 수 있습니다. 마지막에 일치한 규칙이
+  이기기 때문입니다. V2 이전 버전은 `permissions` 대신 `permission` 키를 읽으므로, 그 버전에서는
+  이 조각이 아무 일도 하지 않습니다. `grep` 동작의 resource는 경로가 아니라 검색 패턴입니다. 그래서
+  규칙은 그런 이름이 든 패턴은 막지만, 그런 디렉터리 안의 검색은 막지 못합니다.
+
+강제 장치가 읽기를 실제로 막는지는 테스트 사례 23이 확인합니다.

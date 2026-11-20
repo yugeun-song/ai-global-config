@@ -88,3 +88,99 @@ Step 4 finds the older copy, and step 6 replaces it.
 | OpenCode | C, in `~/.config/opencode/AGENTS.md` | inside that file |
 | Hermes Agent | C, in `~/.hermes/SOUL.md` | inside that file |
 | Cursor | the user pastes the text into User Rules in the settings screen | none |
+
+## Install the guard (optional)
+
+The rules are text. The guard makes a tool refuse a tool call that names a
+credential (Rule SECRET-1), and ask the user before a call changes the
+guard or the hook settings. It works only through the pre-tool hook or the
+permission rules that the tool's official documentation describes. Start
+only when the user asks for the guard.
+
+1. Find your tool in the table below. If it is not in the table, or its
+   current documentation describes no pre-tool hook and no permission
+   rules, tell the user that the guard is not available for it, and stop.
+2. For a tool with a hook, find the real path of a Python 3 interpreter:
+   run `python3 -c "import os, sys; print(os.path.realpath(sys.executable),
+   sys.prefix == sys.base_prefix)"` (on Windows, `py -3` or `python`
+   instead of `python3`). Use the printed path only when the second value
+   is `True` and the path is not a shim of a version manager (pyenv, asdf,
+   mise) or a project virtual environment, because those can change or
+   vanish. If no such interpreter exists, tell the user that the guard
+   needs Python 3, and stop. Claude Code also needs version 2.1.295 or
+   later for `onFailure`.
+3. For a tool with a hook, copy `guards/guard.py` byte for byte to the
+   guard location in the table.
+4. In the tool's fragment, replace `<python3>` with the interpreter path from
+   step 2 and `<home>` with the absolute path of the user's home directory. Keep
+   the quotes around both, and write `/` instead of `\` in both paths, also on
+   Windows. If your tool runs hook commands through PowerShell, put `&` and a
+   space before the quoted interpreter path. Then merge the fragment into the
+   configuration file. Add the fragment's entries next to the existing ones.
+   NEVER remove or change an existing entry. If the file already holds other
+   content, show the user the exact addition and wait for approval. Keep the
+   original content, and restore it if the merged file does not parse as JSON
+   (JSONC for OpenCode).
+5. Verify the guard:
+   - `python3 guards/test_guard.py <installed guard>` reports no failure.
+   - The SHA-256 of the installed guard equals that of `guards/guard.py`.
+   - Run the hook command exactly as the configuration file now holds it,
+     in the shell that your tool uses for hooks, with this input on standard input:
+     `{"tool_name": "Bash", "tool_input": {"command": "cat ~/.netrc"}}`
+     (for agy: `{"toolCall": {"name": "run_command", "args":
+     {"CommandLine": "cat ~/.netrc"}}}`). It must block: exit status 2
+     for Claude Code and Codex, `"decision": "deny"` for agy. The command
+     only reads its input, and no credential is opened.
+   - For OpenCode, read the merged file back and confirm that it holds
+     every rule of the fragment.
+6. Report the locations, both SHA-256 values and the test results. For
+   Codex, ask the user to open `/hooks` in Codex and trust the new hook:
+   Codex skips a new hook until the user trusts it.
+
+| Tool | Guard location | Configuration file | Fragment |
+|---|---|---|---|
+| Claude Code | `~/.claude/hooks/ai-global-config-guard.py` | `~/.claude/settings.json` | `guards/claude-settings.json` |
+| Codex CLI | `~/.codex/hooks/ai-global-config-guard.py` | `~/.codex/hooks.json` | `guards/codex-hooks.json` |
+| Antigravity CLI (agy) | `~/.gemini/config/hooks/ai-global-config-guard.py` | `~/.gemini/config/hooks.json` | `guards/agy-hooks.json` |
+| OpenCode | none: permission rules only | `~/.config/opencode/opencode.jsonc` | `guards/opencode-permissions.json` |
+
+The guard catches mistakes and common attempts. It is not a complete
+security boundary:
+
+- It matches names in the text of a tool call. A command can still reach a
+  secret through a glob (`~/.n?trc`), brace expansion, a variable, a
+  string built at run time, an encoded name, a working directory set in a
+  form it does not parse, a symbolic link named inside a glob or a built
+  string, or a script it wrote earlier.
+- The existence check trusts that `ls`, `stat` and `test` are the real
+  commands. A shell function or an earlier file on `PATH` with the same
+  name can turn that check into a read.
+- Its protection of its own files and of the hook settings is also based
+  on names, so a command that reaches them indirectly gets past it.
+- It can block a harmless command that names such a file, for example a
+  commit message that mentions `.ssh` or `docker compose --env-file .env`.
+- Another hook (from a plugin, a skill, an agent definition or a workspace
+  file) can rewrite a tool call after the guard allowed it.
+- When it runs out of its time budget (about 4 seconds) or cannot parse
+  the call, it decides from the raw text and blocks when in doubt.
+- Claude Code: `disableAllHooks` or a `--settings` override turns the
+  guard off. With `onFailure: "block"`, a deleted or broken guard script
+  blocks every tool call until the user removes the hook entry by hand.
+- Codex has no "ask" decision, so the guard blocks a change to its own
+  files instead of asking. Codex may run a tool when its hook fails, times
+  out or answers in a wrong format. Input sent later to a running terminal
+  (`write_stdin`) does not pass the hook again. Codex skips a new or
+  changed hook until the user trusts it in `/hooks`, so every update needs
+  that step again. `CODEX_HOME` moves the hooks file elsewhere. Hosted
+  tools such as web search do not pass the hook.
+- Antigravity CLI documents no behavior for a failing hook, so treat a
+  failure as letting the call run.
+- OpenCode permission rules match the whole command text, so they are
+  coarser than the hook. A rule loaded later (an agent's or a project's)
+  can allow a path again, because the last matching rule wins. Versions
+  before V2 read a `permission` key instead of `permissions`, so on those
+  versions the fragment does nothing. For the `grep` action the resource is
+  the search pattern, not the path, so a rule blocks a pattern that
+  contains such a name but not a search inside such a directory.
+
+Test case 23 checks whether the guard really blocks a read.

@@ -1,0 +1,16 @@
+{
+  "ai-global-config-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"<python3>\" -I -S \"<home>/.gemini/config/hooks/ai-global-config-guard.py\" agy",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"<python3>\" -I -S \"<home>/.codex/hooks/ai-global-config-guard.py\" codex",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
