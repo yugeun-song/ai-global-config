@@ -21,4 +21,7 @@ text, because different tools load different file names.
   change its translation in the same commit. A difference between the two
   is a bug: fix the translation to match the source.
 - The user allows AI co-author trailers in commits to this repository (Rule
-  ACTION-4).
+  ACTION-4). Antigravity CLI documents no trailer of its own. It uses
+  `Co-Authored-By: Antigravity <noreply@google.com>` here. NEVER use
+  `antigravity@google.com`: that address belongs to an unrelated GitHub
+  account, which GitHub would then show as a contributor.
