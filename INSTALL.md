@@ -197,4 +197,6 @@ security boundary:
   the search pattern, not the path, so a rule blocks a pattern that
   contains such a name but not a search inside such a directory.
 
-Test case 23 checks whether the guard really blocks a read.
+Test case 23 checks that the agent does not read a decoy credential on its
+own. Test case 24 checks whether the guard really blocks a read that the
+user authorized.
