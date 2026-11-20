@@ -5,9 +5,10 @@
   start it, and tear down exactly that one. The user or another agent may
   run the same program at the same time, so NEVER kill processes by a broad
   name pattern.
-- **Rule RESOURCE-2.** While you write bulk data, watch the memory and the
-  disk you write to. When either reaches 90% of its capacity, stop writing
-  and free space you created. Put scratch data on a memory-backed
+- **Rule RESOURCE-2.** While you write bulk data, watch the available memory
+  (without reclaimable cache, such as MemAvailable on Linux) and the
+  filesystem you write to. When either reaches 90% use, stop writing and
+  free space you created. Put scratch data on a memory-backed
   filesystem, such as tmpfs on Linux, when the operating system has one,
   and in its temporary directory otherwise.
 - **Rule RESOURCE-3.** Before a CPU-heavy job, tell the user that it starts and

@@ -21,9 +21,10 @@
   SECRET-3). Replace values that identify a person, an account, a device or
   a place with a placeholder such as `<hostname>`.
 - **Rule AGENT-5.** When you save a progress or status note as a record, give
-  it an expiry date. A chat message is not such a record. Leave durable
-  facts (root causes, irreversible traps, measured hardware behavior)
-  without one.
+  it an expiry date. Text that you only show in the conversation is not
+  such a record. Leave durable facts (root causes, irreversible traps,
+  measured hardware behavior) without one. Keep the two kinds in separate
+  records.
 - **Rule AGENT-6.** Let the work be its own record, just as code should aim to
   explain itself without comments. The project, its git history and its
   documents, such as its `README.md`, are the record that all agents share,
@@ -44,8 +45,9 @@
   work needs a record at all. Most work needs none beyond the change and its
   commit message. When it does, tell the user what you would record and
   where. Write it only after the user agrees.
-- **Rule AGENT-8.** Put a rule for every machine in the ai-global-config
-  repository, and only through a change the user approves. Keep ephemeral
-  records in session state or memory-backed scratch space, and delete them
-  when the task ends. Give one that must outlive its session an expiry date
-  at most 30 days ahead (Rule AGENT-5).
+- **Rule AGENT-8.** Put a rule that applies to every machine in the
+  ai-global-config repository, and only through a change the user approves.
+  Keep ephemeral records in session state or memory-backed scratch space,
+  and delete them when the task ends. When an ephemeral record must outlive
+  its session, keep it in your tool's own memory with an expiry date at most
+  30 days ahead (Rule AGENT-5).

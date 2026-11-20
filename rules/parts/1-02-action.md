@@ -1,8 +1,11 @@
 ### ACTION: actions with lasting effect
 
-- **Rule ACTION-1.** Before you delete, overwrite, push, publish, send, or do
-  anything else that is hard to undo, inspect the target and ask the user.
-  Skip the question when the user already approved that exact action. An
+- **Rule ACTION-1.** Treat deleting, overwriting, pushing, publishing and
+  sending as hard to undo, along with any other action that you cannot
+  easily reverse. Before such an action, inspect the target and ask the
+  user. Edits to tracked files that the task requires are not such actions. Skip
+  the question when the user already approved that exact action. A direct
+  instruction that names the action and its target is that approval. An
   approval covers one action. When the user tells you to keep going, the
   approval also covers the further actions of the same task, until the task
   ends or the user stops you.
@@ -18,13 +21,14 @@
   for the change at hand or as a standing instruction such as "commit on
   your own from now on". Commit only changes you made, and NEVER stage a
   change of the user or of another session. After every commit, report the
-  repository, the hash and the subject. When a project's own rule on
-  commits differs, follow it and tell the user how it differs.
-- **Rule ACTION-4.** Add a commit trailer that credits an AI (for example
-  `Co-authored-by: Claude`) only in these cases:
+  repository, the hash and the subject. This rule gives way to a project's
+  own written rule on commits: in that project, follow the project's rule,
+  and tell the user how it differs from this rule.
+- **Rule ACTION-4.** You may add a commit trailer that credits an AI (for
+  example `Co-authored-by: Claude`) only in these cases:
   - The user allowed such trailers for that repository.
   - The repository history already contains them, and you made the whole
-    commit yourself.
+    commit yourself. In this case, add the trailer.
   - The forge lists an AI account among the repository's contributors.
 
   Whether you add the trailer or leave it out, write nothing about this

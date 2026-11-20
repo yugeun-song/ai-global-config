@@ -6,9 +6,10 @@
   system, Linux kernel work, tracing and profiling (ftrace, perf), and
   systems programming that measures the host. Containers run Linux, so also
   run on the host any build or test that must run on the host's own
-  operating system, such as macOS or Windows. When your tool's sandbox
-  keeps you from the engine, ask the user whether to run it outside the
-  sandbox.
+  operating system, such as macOS or Windows. A one-line check of code you
+  just wrote may run on the host. When your tool's sandbox keeps you from
+  the engine, use the tool's own way to leave the sandbox, and only after
+  the user approves. Never leave it any other way.
 - **Rule CONTAINER-2.** When both are installed, use podman. Use docker only
   when podman is missing or unusable. If the engine's daemon, or on macOS
   and Windows its virtual machine, is not running, ask the user before you
