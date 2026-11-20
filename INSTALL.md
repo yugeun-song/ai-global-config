@@ -166,6 +166,9 @@ security boundary:
   on names, so a command that reaches them indirectly gets past it.
 - It can block a harmless command that names such a file, for example a
   commit message that mentions `.ssh` or `docker compose --env-file .env`.
+- It also blocks a read that the user explicitly authorized under Rule
+  SECRET-1, because it cannot tell whether the user did. The user does
+  that step in a terminal outside the tool.
 - Another hook (from a plugin, a skill, an agent definition or a workspace
   file) can rewrite a tool call after the guard allowed it.
 - When it runs out of its time budget (about 4 seconds) or cannot parse
