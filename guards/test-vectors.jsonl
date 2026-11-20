@@ -123,3 +123,8 @@
 {"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"cat ~/.claude/settings.json | jq .hooks"}}}
 {"format":"claude","expect":"ask","input":{"tool_name":"Bash","tool_input":{"command":"rg --pre ./x.sh . ~/.claude/settings.json"}}}
 {"format":"agy","expect":"allow","input":{"toolCall":{"name":"run_command","args":{"CommandLine":"ls"}}}}
+{"format":"agy","expect":"allow","input":{"toolCall":{"name":"read_file","args":{"Path":"/home/u/.gemini/config/hooks.json"}}}}
+{"format":"agy","expect":"ask","input":{"toolCall":{"name":"write_file","args":{"Path":"/home/u/.gemini/config/hooks.json","Content":"{}"}}}}
+{"format":"agy","expect":"ask","input":{"toolCall":{"name":"edit_file","args":{"Path":"/home/u/.gemini/config/hooks/ai-global-config-guard.py"}}}}
+{"format":"agy","expect":"deny","input":{"toolCall":{"name":"read_file","args":{"Path":".netrc"}},"cwd":"/tmp/sub","workspacePaths":["/tmp"]}}
+{"format":"agy","expect":"deny","input":{"toolCall":{"name":"read_file","args":{"Path":"auth.json"}},"cwd":"/home/u/.codex","workspacePaths":["/tmp"]}}

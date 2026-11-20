@@ -65,8 +65,8 @@ ESCAPES = re.compile(r"[\"'\\`^]")
 UNICODE_ESCAPE = re.compile(r"\\u([0-9a-fA-F]{4})")
 SHELL_TOOLS = {"bash", "shell", "exec_command", "run_command", "powershell", "write_stdin", "monitor"}
 SHELL_KEYS = ("command", "commandline", "cmd", "chars", "input")
-WRITE_TOOLS = {"apply_patch", "write", "edit", "multiedit", "notebookedit", "write_to_file", "replace_file_content", "multi_replace_file_content"}
-READ_ONLY_TOOLS = {"read", "grep", "glob", "view_file", "list_dir", "find_by_name", "grep_search", "websearch", "webfetch", "search_web", "read_url_content", "todowrite", "agent", "task"}
+WRITE_TOOLS = {"apply_patch", "write", "edit", "write_file", "edit_file", "multiedit", "notebookedit", "write_to_file", "replace_file_content", "multi_replace_file_content"}
+READ_ONLY_TOOLS = {"read", "read_file", "grep", "glob", "view_file", "list_dir", "find_by_name", "grep_search", "websearch", "webfetch", "search_web", "read_url_content", "todowrite", "agent", "task"}
 SEARCH_GLOB_KEYS = {"grep": ("glob",), "glob": ("pattern",), "grep_search": ("includes",), "find_by_name": ("pattern",)}
 PATH_WORDS = {"path", "paths", "file", "files", "filename", "dir", "dirs", "directory", "target", "cwd", "workdir", "location", "uri"}
 KEY_WORD = re.compile(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])")
@@ -343,7 +343,7 @@ def main():
         if fmt == "agy":
             call = event.get("toolCall") or {}
             tool, args = call.get("name", ""), call.get("args", {})
-            cwd = (args.get("Cwd") if isinstance(args, dict) else None) or next(iter(event.get("workspacePaths") or []), None)
+            cwd = (args.get("Cwd") if isinstance(args, dict) else None) or event.get("cwd") or next(iter(event.get("workspacePaths") or []), None)
         else:
             tool, args, cwd = event.get("tool_name", ""), event.get("tool_input", {}), event.get("cwd")
         decision = verdict(tool, args, cwd if isinstance(cwd, str) else None)
