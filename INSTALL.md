@@ -216,7 +216,7 @@ the user asks for the guard.
 6. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
-   - `python3 guards/test_guard.py --hook <claude|codex|agy>` reports no
+   - `python3 guards/test_guard.py --hook <claude|codex|agy|gemini>` reports no
      failure. It runs every guard command that the configuration file
      holds (for Claude Code, also the managed settings), exactly as
      written: an exec-form entry directly, and a shell-form entry through
@@ -241,6 +241,7 @@ the user asks for the guard.
 | Claude Code | `~/.claude/hooks/ai-global-config-guard.py`, or `hooks/ai-global-config-guard.py` in the managed settings directory | `~/.claude/settings.json`, or `managed-settings.json` | `guards/claude-settings.json` |
 | Codex CLI | `~/.codex/hooks/ai-global-config-guard.py` | `~/.codex/hooks.json` | `guards/codex-hooks.json` |
 | Antigravity CLI (agy) | `~/.gemini/config/hooks/ai-global-config-guard.py` | `~/.gemini/config/hooks.json` | `guards/agy-hooks.json` |
+| Gemini CLI | `~/.gemini/hooks/ai-global-config-guard.py` | `~/.gemini/settings.json` | `guards/gemini-settings.json` |
 | OpenCode | none: permission rules and policies | `~/.config/opencode/opencode.jsonc`; with root, also the system file | `guards/opencode-permissions.json` |
 
 The guard catches mistakes and common attempts. It is not a complete
@@ -264,8 +265,11 @@ security boundary:
   name can turn that check into a read.
 - Its protection of its own files and of the hook settings is also based
   on names, so a command that reaches them indirectly gets past it.
-- It can block a harmless command that names such a file, for example a
-  commit message that mentions `.ssh` or `docker compose --env-file .env`.
+- It can block a harmless command that names such a file, for example
+  `docker compose --env-file .env`. Literal `git commit -m`, `git tag -m`,
+  `git merge -m`, `git notes -m` messages and single-quoted
+  `git commit -F - <<'EOF'` heredocs without shell command substitution are
+  allowed.
 - It also blocks a read that the user explicitly authorized under Rule
   SECRET-1, because it cannot tell whether the user did. The user does
   that step in a terminal outside the tool.
@@ -306,6 +310,12 @@ security boundary:
   documentation bundled with version 1.5.13 says that `"allow"` approves
   the call. Under the second reading, the guard would skip the approval
   prompts of agy.
+- Gemini CLI: `BeforeTool` hooks use millisecond `timeout` values (the
+  fragment sets `10000` for 10 seconds), regex `matcher` (`".*"`), and
+  support `"allow"` and `"deny"` decisions (no `"ask"` decision), so the
+  guard denies a change to its own files or `~/.gemini/settings.json`
+  instead of asking. If a `BeforeTool` hook times out, Gemini CLI fails
+  open and lets the tool call run.
 - OpenCode permission rules match the whole command text, so they are
   coarser than the hook. A rule loaded later (an agent's or a project's)
   can allow a path again, because the last matching rule wins. The

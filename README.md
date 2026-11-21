@@ -61,9 +61,9 @@ same line. `INSTALL.md` lists the location for each tool:
 
 The rules are text. The optional guard in `guards/` makes a tool refuse a
 tool call that names a credential, through the hook or permission rules
-that the tool documents: hooks for Claude Code, Codex and agy, permission
-rules and policies for OpenCode. The hooks need Python 3.6 or later.
-`INSTALL.md` describes how to install the guard, and
+that the tool documents: hooks for Claude Code, Codex, Antigravity CLI (agy)
+and Gemini CLI, permission rules and policies for OpenCode. The hooks need
+Python 3.6 or later. `INSTALL.md` describes how to install the guard, and
 `python3 guards/test_guard.py` checks it. With administrator or root
 rights, the guard can also go into the managed settings of Claude Code,
 and `guards/opencode-system-policy.sh` copies the OpenCode policies into

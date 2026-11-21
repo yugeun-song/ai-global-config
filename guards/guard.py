@@ -61,31 +61,41 @@ HOME_SWEEPING = re.compile(
     re.IGNORECASE,
 )
 HOME_VAR = re.compile(r"^(?:\$HOME|\$\{HOME\}|\$env:USERPROFILE|\$env:HOME|%USERPROFILE%)(?=/|$)", re.IGNORECASE)
+DRIVE_ROOT = re.compile(r"^[A-Za-z]:/(?:\*{1,2}(?:\.\*)?/?)*$")
 TRAILING_GLOB = re.compile(r"(?:/\*{1,2}(?:\.\*)?)+$")
-CONTENT_SEARCH_TOOLS = {"grep", "grep_search"}
+CONTENT_SEARCH_TOOLS = {"grep", "grep_search", "search_file_content"}
+MULTI_READ_TOOLS = {"read_many_files"}
 PROTECTED = re.compile(
     r"\.claude/settings[\w.-]*\.json|\.claude/hooks(?:/|$)"
     r"|\.codex/hooks\.json|\.codex/config\.toml|\.codex/hooks(?:/|$)"
     r"|\.gemini/config/hooks\.json|\.gemini/config/hooks(?:/|$)"
+    r"|\.gemini/settings\.json|\.gemini/hooks(?:/|$)"
     r"|\.config/opencode/opencode\.jsonc?|(?:^|/)opencode\.jsonc?$|(?:^|/)\.opencode/"
     r"|\.claude/(?:skills|agents|plugins)/|(?:^|/)\.agents/hooks\.json|\.codex/plugins/|/etc/codex/"
     r"|\.codex/requirements\.toml|disableAllHooks",
-    re.IGNORECASE,
-)
-READ_ONLY_COMMAND = re.compile(
-    r"^(?![^\n]*\s--pre)(?![^\n]*\bless\s[^\n]*-[oO])\s*(?:cat|less|more|head|tail|grep|rg|jq|ls|stat|test|wc|file|diff"
-    r"|Get-Content|type|git\s+(?:diff|log|show|status))\s[^;&|`$()<>\r\n]*(?:\|\s*jq\s[^;&|`$()<>\r\n]*)?\Z",
     re.IGNORECASE,
 )
 EXISTENCE_ONLY = re.compile(r"^\s*(?:ls|stat|test|\[|Test-Path|Get-Item)\s[^;&|`$()<>\r\n]*\Z", re.IGNORECASE)
 ESCAPES = re.compile(r"[\"'\\`^]")
 WORD_BREAK = re.compile(r"[\s;&|(){}<>,=]+")
 UNICODE_ESCAPE = re.compile(r"\\u([0-9a-fA-F]{4})")
-SHELL_TOOLS = {"bash", "shell", "exec_command", "run_command", "powershell", "write_stdin", "monitor"}
+SHELL_TOOLS = {"bash", "shell", "exec_command", "run_command", "run_shell_command", "powershell", "write_stdin", "monitor"}
 SHELL_KEYS = ("command", "commandline", "cmd", "chars", "input")
-WRITE_TOOLS = {"apply_patch", "write", "edit", "write_file", "edit_file", "multiedit", "notebookedit", "write_to_file", "replace_file_content", "multi_replace_file_content"}
-READ_ONLY_TOOLS = {"read", "read_file", "grep", "glob", "view_file", "list_dir", "find_by_name", "grep_search", "websearch", "webfetch", "search_web", "read_url_content", "todowrite", "agent", "task"}
-SEARCH_GLOB_KEYS = {"grep": ("glob",), "glob": ("pattern",), "grep_search": ("includes",), "find_by_name": ("pattern",)}
+WRITE_TOOLS = {"apply_patch", "write", "edit", "write_file", "edit_file", "replace", "multiedit", "notebookedit", "write_to_file", "replace_file_content", "multi_replace_file_content"}
+READ_ONLY_TOOLS = {
+    "read", "read_file", "read_many_files", "grep", "glob", "view_file", "list_dir",
+    "list_directory", "find_by_name", "grep_search", "search_file_content",
+    "websearch", "webfetch", "search_web", "google_web_search", "web_fetch",
+    "read_url_content", "todowrite", "agent", "task", "ask_user",
+}
+SEARCH_GLOB_KEYS = {
+    "grep": ("glob",),
+    "glob": ("pattern",),
+    "grep_search": ("includes", "include", "include_pattern"),
+    "search_file_content": ("include", "includes", "include_pattern", "glob"),
+    "find_by_name": ("pattern",),
+    "read_many_files": ("include", "paths"),
+}
 PATH_WORDS = {"path", "paths", "file", "files", "filename", "dir", "dirs", "directory", "target", "cwd", "workdir", "location", "uri"}
 KEY_WORD = re.compile(r"[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])")
 WORKDIR_KEYS = ("workdir", "cwd", "working_directory")
@@ -98,6 +108,30 @@ CD = re.compile(
     r"\s+(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s;&|)}]+)",
     re.IGNORECASE,
 )
+PURE_CD = re.compile(
+    r"^\s*(?:cd|pushd|chdir|Set-Location|sl|Push-Location)(?:\s+(?:-[-\w]*|/d))*"
+    r"\s+(\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s;&|)}]+)\s*\Z",
+    re.IGNORECASE,
+)
+STDERR_SAFE = re.compile(r"(?:^|\s)2>(?:&1|/dev/null)(?=\s|$)")
+READ_ONLY_CMDS = {
+    "cat", "less", "more", "head", "tail", "grep", "egrep", "fgrep", "rg", "jq",
+    "ls", "stat", "test", "[", "wc", "file", "diff", "cmp", "sha256sum", "shasum",
+    "md5sum", "cksum", "readlink", "realpath", "which", "true", "false",
+    "get-content", "get-filehash", "get-item", "get-childitem", "test-path", "type", "dir",
+}
+READ_ONLY_PIPE_SINKS = {
+    "jq", "head", "tail", "grep", "egrep", "fgrep", "rg", "wc", "sort", "uniq",
+    "cut", "tr", "cat", "less", "more", "select-object", "select-string",
+    "format-table", "format-list",
+}
+READ_ONLY_GIT_SUBS = {"status", "diff", "log", "show", "rev-parse", "ls-files", "check-ignore"}
+GIT_GLOBAL_VALUE_FLAGS = {"-c", "--git-dir", "--work-tree", "--namespace", "--config-env", "--super-prefix"}
+GIT_MESSAGE_SUBS = {"commit", "tag", "merge", "notes"}
+GIT_SHORT_M = re.compile(r"^-[asevqnoSu]*m$")
+HEREDOC_OPEN = re.compile(r"<<(-?)([\"'])([A-Za-z0-9_]+)\2")
+PYTHON_CMDS = {"python", "python3", "python.exe", "py", "py.exe"}
+PYTHON_SAFE_FLAGS = {"-I", "-S", "-B", "-u", "-E", "-s"}
 SEP = r"[\\/]" if os.name == "nt" else "/"
 ROOT = re.compile(SEP + "*")
 PART = re.compile(SEP)
@@ -110,6 +144,7 @@ DRIVE_URL = re.compile(r"^/(?=[A-Za-z]:)")
 HOOK_SWITCH = re.compile(r"disableAllHooks", re.IGNORECASE)
 MAX_REALPATH = 4096
 MAX_BASES = 8
+MAX_SEGMENTS = 100
 REALPATH_BUDGET = 2000
 EXISTS_BUDGET = 4000
 DEADLINE = time.monotonic() + 4.0
@@ -121,6 +156,7 @@ class OverBudget(Exception):
 
 budget = {"realpath": REALPATH_BUDGET, "exists": EXISTS_BUDGET}
 cache = {}
+path_cache = {}
 REASON = (
     "Blocked by the ai-global-config guard (Rule SECRET-1): this tool call names "
     "a credential or a secret store. Only one plain ls, stat or test (Test-Path on "
@@ -157,6 +193,12 @@ def strings(value):
 def is_path_key(key):
     words = KEY_WORD.findall(key)
     return bool(words) and words[-1].lower() in PATH_WORDS
+
+
+def is_path_key_for(tool_name, key):
+    if tool_name == "edit_file" and key.lower() == "target":
+        return False
+    return is_path_key(key)
 
 
 def keyed(value, wanted):
@@ -239,25 +281,40 @@ def with_real(bases):
     return list(dict.fromkeys(found))
 
 
+def resolve_one(expanded, base):
+    key = (expanded, base)
+    cached = path_cache.get(key)
+    if cached is not None:
+        return cached
+    if time.monotonic() > DEADLINE:
+        raise OverBudget()
+    resolved = []
+    try:
+        linked = may_link(expanded, base)
+        path = os.path.join(base, expanded) if base and not os.path.isabs(expanded) else expanded
+        path = os.path.normpath(path)
+        resolved.append(path.replace("\\", "/"))
+        if linked and len(path) <= MAX_REALPATH and not REMOTE.match(path):
+            resolved.append(counted("realpath", path, os.path.realpath).replace("\\", "/"))
+    except (OSError, ValueError):
+        pass
+    out = tuple(resolved)
+    path_cache[key] = out
+    return out
+
+
 def path_forms(text, bases):
     forms = text_forms(text)
     raw = DEVICE_PREFIX.sub("", text.strip())
     if not raw or len(raw) > MAX_REALPATH or REMOTE.match(raw):
         return forms
-    for base in bases:
-        if time.monotonic() > DEADLINE:
-            raise OverBudget()
-        try:
-            path = os.path.expanduser(raw)
-            linked = may_link(path, base)
-            if base and not os.path.isabs(path):
-                path = os.path.join(base, path)
-            path = os.path.normpath(path)
-            forms.add(path.replace("\\", "/"))
-            if linked and len(path) <= MAX_REALPATH and not REMOTE.match(path):
-                forms.add(counted("realpath", path, os.path.realpath).replace("\\", "/"))
-        except (OSError, ValueError):
-            pass
+    try:
+        expanded = os.path.expanduser(raw)
+    except (OSError, ValueError):
+        return forms
+    iter_bases = (None,) if os.path.isabs(expanded) else bases
+    for base in iter_bases:
+        forms.update(resolve_one(expanded, base))
     return forms
 
 
@@ -289,7 +346,10 @@ def expand(text):
 def covers_home(forms):
     home = os.path.normcase(os.path.expanduser("~")).replace("\\", "/").rstrip("/")
     for form in forms:
-        raw = TRAILING_GLOB.sub("", HOME_VAR.sub("~", form.replace("\\", "/")))
+        slashed = form.replace("\\", "/")
+        if DRIVE_ROOT.match(slashed):
+            return True
+        raw = TRAILING_GLOB.sub("", HOME_VAR.sub("~", slashed))
         if raw.startswith("/") and not raw.strip("/"):
             return True
         path = os.path.normcase(raw).replace("\\", "/").rstrip("/")
@@ -301,6 +361,384 @@ def covers_home(forms):
 def is_home(forms):
     home = os.path.normcase(os.path.expanduser("~")).replace("\\", "/").rstrip("/")
     return any(os.path.normcase(form).replace("\\", "/").rstrip("/") in ("~", home) for form in forms)
+
+
+def split_segments(command):
+    if len(command) > 40000:
+        return [("", command)]
+    segments = []
+    start = 0
+    prev_sep = ""
+    quote = None
+    depth = 0
+    i = 0
+    n = len(command)
+    while i < n:
+        ch = command[i]
+        if quote is not None:
+            if quote == '"' and ch == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+            i += 1
+            continue
+        if ch == "\\" and i + 1 < n:
+            i += 2
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            i += 1
+            continue
+        if ch == "(":
+            depth += 1
+            i += 1
+            continue
+        if ch == ")" and depth > 0:
+            depth -= 1
+            i += 1
+            continue
+        if depth == 0:
+            sep = None
+            if ch in (";", "\n"):
+                sep = ch
+            elif ch == "&" and i + 1 < n and command[i + 1] == "&":
+                sep = "&&"
+            elif ch == "|" and i + 1 < n and command[i + 1] == "|":
+                sep = "||"
+            if sep is not None:
+                segments.append((prev_sep, command[start:i]))
+                prev_sep = sep
+                i += len(sep)
+                start = i
+                if len(segments) >= MAX_SEGMENTS:
+                    break
+                continue
+        i += 1
+    segments.append((prev_sep, command[start:]))
+    return segments
+
+
+def is_safe_literal_quote(raw):
+    if len(raw) < 2:
+        return False
+    if raw[0] == "'" and raw[-1] == "'":
+        return raw.count("'") == 2
+    if raw.startswith("@'\n") or raw.startswith("@'\r\n"):
+        return raw.endswith("\n'@") and raw.find("\n'@") == len(raw) - 3
+    if raw[0] == '"' and raw[-1] == '"':
+        if "$(" in raw or "`" in raw or "<(" in raw or ">(" in raw:
+            return False
+        i = 1
+        end = len(raw) - 1
+        while i < end:
+            if raw[i] == "\\" and i + 1 < end:
+                i += 2
+                continue
+            if raw[i] == '"':
+                return False
+            i += 1
+        return True
+    return False
+
+
+def scan_simple_tokens(text):
+    toks = []
+    i = 0
+    n = len(text)
+    while i < n:
+        while i < n and text[i] in " \t\r":
+            i += 1
+        if i >= n:
+            break
+        ch = text[i]
+        if ch in ";|&<>()\n`":
+            break
+        if ch == "$" and i + 1 < n and text[i + 1] == "(":
+            break
+        start = i
+        if text[i:i + 3] == "@'\n" or text[i:i + 4] == "@'\r\n":
+            end_marker = text.find("\n'@", i + 2)
+            if end_marker == -1:
+                break
+            i = end_marker + 3
+            toks.append((start, i, text[start:i]))
+            continue
+        while i < n and text[i] not in " \t\r;|&<>()\n`":
+            if text[i] == "$" and i + 1 < n and text[i + 1] == "(":
+                break
+            if text[i] == "'":
+                j = text.find("'", i + 1)
+                if j == -1:
+                    return toks
+                i = j + 1
+            elif text[i] == '"':
+                j = i + 1
+                while j < n:
+                    if text[j] == "\\" and j + 1 < n:
+                        j += 2
+                        continue
+                    if text[j] == '"':
+                        j += 1
+                        break
+                    j += 1
+                else:
+                    return toks
+                i = j
+            elif text[i] == "\\" and i + 1 < n:
+                i += 2
+            else:
+                i += 1
+        toks.append((start, i, text[start:i]))
+    return toks
+
+
+def git_subcommand_index(toks):
+    if not toks or toks[0][2].lower() not in ("git", "git.exe"):
+        return None
+    i = 1
+    while i < len(toks):
+        word = toks[i][2]
+        if word in ("-C", "-c") or word.lower() in GIT_GLOBAL_VALUE_FLAGS:
+            i += 2
+            continue
+        if word.startswith("-"):
+            i += 1
+            continue
+        return i
+    return None
+
+
+def strip_git_heredocs(command):
+    if "<<" not in command or "git" not in command.lower():
+        return command
+    lines = command.splitlines(keepends=True)
+    out = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        match = HEREDOC_OPEN.search(line)
+        if match:
+            strip_tabs = match.group(1) == "-"
+            delim = match.group(3)
+            prefix = line[:match.start()]
+            segs = split_segments(prefix)
+            tail = segs[-1][1] if segs else ""
+            toks = scan_simple_tokens(tail)
+            sub_idx = git_subcommand_index(toks)
+            is_commit_stdin = False
+            if sub_idx is not None and toks[sub_idx][2] == "commit":
+                words = [t[2] for t in toks[sub_idx + 1:]]
+                for k, w in enumerate(words):
+                    if w == "--file=-":
+                        is_commit_stdin = True
+                    elif w in ("-F", "--file") and k + 1 < len(words) and words[k + 1] == "-":
+                        is_commit_stdin = True
+            if is_commit_stdin:
+                j = i + 1
+                found_end = None
+                while j < len(lines):
+                    candidate = lines[j].rstrip("\r\n")
+                    if strip_tabs:
+                        candidate = candidate.lstrip("\t")
+                    if candidate == delim:
+                        found_end = j
+                        break
+                    j += 1
+                if found_end is not None:
+                    out.append("_\n")
+                    out.append(lines[found_end])
+                    i = found_end + 1
+                    continue
+        i += 1
+    return "".join(out)
+
+
+def strip_git_messages(command):
+    if "git" not in command.lower():
+        return command
+    command = strip_git_heredocs(command)
+    if len(command) > 200000:
+        return command
+    segments = split_segments(command)
+    rebuilt = []
+    for sep, seg in segments:
+        if sep:
+            rebuilt.append(sep)
+        toks = scan_simple_tokens(seg)
+        sub_idx = git_subcommand_index(toks)
+        if sub_idx is None or toks[sub_idx][2] not in GIT_MESSAGE_SUBS:
+            rebuilt.append(seg)
+            continue
+        replacements = []
+        k = sub_idx + 1
+        while k < len(toks):
+            start, end, word = toks[k]
+            if word in ("-m", "--message") or GIT_SHORT_M.match(word):
+                if k + 1 < len(toks) and is_safe_literal_quote(toks[k + 1][2]):
+                    replacements.append((toks[k + 1][0], toks[k + 1][1], "_"))
+                    k += 2
+                    continue
+            elif word.startswith("--message="):
+                val = word[len("--message="):]
+                if is_safe_literal_quote(val):
+                    replacements.append((start + len("--message="), end, "_"))
+            k += 1
+        if not replacements:
+            rebuilt.append(seg)
+            continue
+        parts = []
+        pos = 0
+        for s, e, rep in replacements:
+            parts.append(seg[pos:s])
+            parts.append(rep)
+            pos = e
+        parts.append(seg[pos:])
+        rebuilt.append("".join(parts))
+    return "".join(rebuilt)
+
+
+def split_pipes(segment):
+    stages = []
+    start = 0
+    quote = None
+    i = 0
+    n = len(segment)
+    while i < n:
+        ch = segment[i]
+        if quote is not None:
+            if quote == '"' and ch == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+            i += 1
+            continue
+        if ch == "\\" and i + 1 < n:
+            i += 2
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            i += 1
+            continue
+        if ch == "|":
+            stages.append(segment[start:i])
+            start = i + 1
+        i += 1
+    stages.append(segment[start:])
+    return stages
+
+
+def has_unquoted_construct(text, targets):
+    quote = None
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if quote == "'":
+            if ch == "'":
+                quote = None
+            i += 1
+            continue
+        if quote == '"':
+            if ch == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if ch == '"':
+                quote = None
+                i += 1
+                continue
+            for t in targets:
+                if t in ("$(", "`") and text.startswith(t, i):
+                    return True
+            i += 1
+            continue
+        if ch == "\\" and i + 1 < n:
+            i += 2
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            i += 1
+            continue
+        for t in targets:
+            if text.startswith(t, i):
+                return True
+        i += 1
+    return False
+
+
+def is_read_only_stage(stage, is_pipe_sink):
+    cleaned = STDERR_SAFE.sub(" ", stage).strip()
+    if not cleaned:
+        return False
+    if has_unquoted_construct(cleaned, (">", "<", "$(", "`")):
+        return False
+    try:
+        toks = shlex.split(cleaned, posix=True)
+    except ValueError:
+        return False
+    if not toks:
+        return False
+    cmd = os.path.basename(toks[0]).lower()
+    if is_pipe_sink:
+        if cmd not in READ_ONLY_PIPE_SINKS:
+            return False
+    else:
+        if cmd in READ_ONLY_CMDS:
+            pass
+        elif cmd == "command":
+            if len(toks) < 2 or toks[1] not in ("-v", "-V"):
+                return False
+        elif cmd in ("git", "git.exe"):
+            i = 1
+            while i < len(toks):
+                w = toks[i]
+                if w in ("-C", "-c") or w.lower() in GIT_GLOBAL_VALUE_FLAGS:
+                    i += 2
+                    continue
+                if w.startswith("-"):
+                    i += 1
+                    continue
+                break
+            if i >= len(toks) or toks[i].lower() not in READ_ONLY_GIT_SUBS:
+                return False
+        elif cmd in PYTHON_CMDS:
+            i = 1
+            while i < len(toks) and toks[i] in PYTHON_SAFE_FLAGS:
+                i += 1
+            if i >= len(toks) or toks[i].startswith("-"):
+                return False
+            if os.path.basename(toks[i]).lower() != "test_guard.py":
+                return False
+        else:
+            return False
+    if cmd == "rg" and any(t == "--pre" or t.startswith("--pre=") for t in toks[1:]):
+        return False
+    if cmd == "less" and any(
+        t == "--log-file" or t.startswith("--log-file=") or (t.startswith("-") and not t.startswith("--") and ("o" in t[1:] or "O" in t[1:]))
+        for t in toks[1:]
+    ):
+        return False
+    return True
+
+
+def is_read_only_command(command):
+    if not command or len(command) > 20000:
+        return False
+    if has_unquoted_construct(command, ("$(", "`", "<(", ">(")):
+        return False
+    segments = split_segments(command)
+    has_any = False
+    for _, seg in segments:
+        if not seg.strip():
+            continue
+        has_any = True
+        stages = split_pipes(seg)
+        for idx, stage in enumerate(stages):
+            if not is_read_only_stage(stage, idx > 0):
+                return False
+    return has_any
 
 
 def tokens(command):
@@ -327,26 +765,43 @@ def command_words(command):
     return list(dict.fromkeys(whole + pieces)), whole, shell
 
 
+def resolve_cd_targets(cd_targets, current_bases):
+    resolved = []
+    for target in cd_targets:
+        exp = expand(target)
+        if os.path.isabs(exp) or not current_bases:
+            resolved.append(exp)
+        else:
+            for base in current_bases:
+                resolved.append(os.path.normpath(os.path.join(base, exp)) if base else exp)
+    return with_real(list(dict.fromkeys(resolved))[:MAX_BASES])
+
+
 def check_command(command, bases):
     if not command:
         return "allow"
-    command = DIRENV.sub("direnv", command)
+    command = strip_git_messages(DIRENV.sub("direnv", command))
     words, whole, shell = command_words(command)
     cd_words = [m.strip("\"'") for m in CD.findall(command)]
     cd_bases = [expand(m) for m in cd_words]
-    all_bases = list(dict.fromkeys(list(bases) + cd_bases))
+    base_list = list(bases)
+    base_set = set(base_list)
+    all_bases = list(dict.fromkeys(base_list + cd_bases))
+    first_pass = {}
     for word in words:
-        if len(all_bases) >= MAX_BASES:
-            break
-        found = path_forms(word, list(bases))
-        if names_secret_dir(found) or is_home(found):
+        found = path_forms(word, base_list)
+        first_pass[word] = found
+        if len(all_bases) < MAX_BASES and (names_secret_dir(found) or is_home(found)):
             all_bases.append(expand(word))
     all_bases = with_real(list(dict.fromkeys(all_bases))[:MAX_BASES])
+    extra_bases = [b for b in all_bases if b not in base_set]
     word_forms = set()
     whole_forms = set()
     whole_set = set(whole)
     for word in words:
-        found = path_forms(word, all_bases)
+        found = first_pass[word]
+        if extra_bases:
+            found = found | path_forms(word, extra_bases)
         word_forms |= found
         if word in whole_set:
             whole_forms |= found
@@ -354,15 +809,47 @@ def check_command(command, bases):
     if names_secret(forms) and not EXISTENCE_ONLY.match(command):
         if not IGNORE_APPEND.match(command) and not ENV_FROM_EXAMPLE.match(command):
             return "deny"
-    if SWEEPING.search(command) and names_secret_dir(whole_forms):
-        return "deny"
-    if HOME_SWEEPING.search(command):
-        skip = {form for word in cd_words for form in (word, word.replace("\\", "/"))}
-        home_bases = with_real(cd_bases[:MAX_BASES]) if cd_bases else list(bases)
-        home_words = dict.fromkeys(word.strip(";&|()") for word in shell)
-        if any(word and word not in skip and covers_home(path_forms(word, home_bases)) for word in home_words):
-            return "home"
-    if names_protected(forms) and not READ_ONLY_COMMAND.match(command):
+    seg_bases = list(base_list)
+    for sep, seg in split_segments(command):
+        stripped = seg.strip()
+        if not stripped:
+            continue
+        seg_cd_raw = [m.strip("\"'") for m in CD.findall(stripped)]
+        is_pure_cd = bool(PURE_CD.match(stripped))
+        if is_pure_cd and seg_cd_raw:
+            next_bases = resolve_cd_targets(seg_cd_raw, seg_bases)
+            if sep == "||":
+                seg_bases = list(dict.fromkeys(seg_bases + next_bases))[:MAX_BASES]
+            else:
+                seg_bases = next_bases
+            continue
+        cur_bases = seg_bases
+        if seg_cd_raw:
+            next_bases = resolve_cd_targets(seg_cd_raw, seg_bases)
+            cur_bases = list(dict.fromkeys(next_bases + seg_bases))[:MAX_BASES]
+            if not stripped.startswith("("):
+                seg_bases = cur_bases
+        need_sweep = bool(SWEEPING.search(stripped))
+        need_home = bool(HOME_SWEEPING.search(stripped))
+        if need_sweep or need_home:
+            _, seg_whole, seg_shell = command_words(stripped)
+            sweep_bases = list(cur_bases)
+            if need_sweep:
+                for w in seg_whole:
+                    if len(sweep_bases) >= MAX_BASES:
+                        break
+                    wf = path_forms(w, cur_bases)
+                    if names_secret_dir(wf) or is_home(wf):
+                        sweep_bases.append(expand(w))
+                sweep_bases = with_real(list(dict.fromkeys(sweep_bases))[:MAX_BASES])
+                if any(names_secret_dir(path_forms(w, sweep_bases)) for w in seg_whole):
+                    return "deny"
+            if need_home:
+                skip = {form for word in seg_cd_raw for form in (word, word.replace("\\", "/"))}
+                home_words = dict.fromkeys(word.strip(";&|()") for word in seg_shell)
+                if any(word and word not in skip and covers_home(path_forms(word, cur_bases)) for word in home_words):
+                    return "home"
+    if names_protected(forms) and not is_read_only_command(command):
         return "ask"
     return "allow"
 
@@ -391,12 +878,14 @@ def verdict(tool, args, cwd):
                     result = "ask"
         if not any(k in lowered for k in SHELL_KEYS) and names_secret(text_forms(joined(args))):
             return "deny"
-    paths = list(keyed(args, is_path_key)) + list(file_urls(args))
+    paths = list(keyed(args, lambda k: is_path_key_for(name, k))) + list(file_urls(args))
     targets = list(patch_targets(args))
     for key in SEARCH_GLOB_KEYS.get(name, ()):
         if key in lowered:
             roots = [p for p in paths if p] or [cwd]
-            paths += [os.path.join(r, joined(lowered[key])) if r else joined(lowered[key]) for r in roots]
+            for item in strings(lowered[key]):
+                if item:
+                    paths += [os.path.join(r, item) if r else item for r in roots]
     if name not in SHELL_TOOLS and name not in WRITE_TOOLS and name not in READ_ONLY_TOOLS:
         for key in SHELL_KEYS:
             if key in lowered:
@@ -412,8 +901,11 @@ def verdict(tool, args, cwd):
         if any(path and names_secret_dir(path_forms(path, bases)) for path in paths):
             return "deny"
     if name in CONTENT_SEARCH_TOOLS:
-        roots = [p for p in keyed(args, is_path_key) if p] or [cwd]
+        roots = [p for p in keyed(args, lambda k: is_path_key_for(name, k)) if p] or [cwd]
         if any(root and covers_home(path_forms(root, bases)) for root in roots):
+            return "home"
+    if name in MULTI_READ_TOOLS:
+        if any(path and covers_home(path_forms(path, bases)) for path in paths):
             return "home"
     if name not in READ_ONLY_TOOLS:
         if any(path and names_protected(path_forms(path, bases)) for path in paths + targets):
@@ -435,12 +927,15 @@ def fallback(raw):
 
 def respond(fmt, decision):
     if decision == "allow":
-        if fmt == "agy":
+        if fmt in ("agy", "gemini"):
             sys.stdout.write(json.dumps({"decision": "allow"}))
         sys.exit(0)
     reason = {"deny": REASON, "budget": BUDGET_REASON, "home": HOME_REASON}.get(decision, PROTECT_REASON)
     if fmt == "agy":
         sys.stdout.write(json.dumps({"decision": "force_ask" if decision == "ask" else "deny", "reason": reason}))
+        sys.exit(0)
+    if fmt == "gemini":
+        sys.stdout.write(json.dumps({"decision": "deny", "reason": reason}))
         sys.exit(0)
     if fmt == "claude" and decision == "ask":
         sys.stdout.write(json.dumps({"hookSpecificOutput": {
@@ -455,8 +950,8 @@ def respond(fmt, decision):
 
 def main():
     fmt = sys.argv[1] if len(sys.argv) == 2 else ""
-    if fmt not in ("claude", "codex", "agy"):
-        sys.stderr.write("ai-global-config guard: usage: guard.py <claude|codex|agy>\n")
+    if fmt not in ("claude", "codex", "agy", "gemini"):
+        sys.stderr.write("ai-global-config guard: usage: guard.py <claude|codex|agy|gemini>\n")
         sys.exit(2)
     raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
     try:

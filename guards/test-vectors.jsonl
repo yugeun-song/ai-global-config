@@ -190,3 +190,40 @@
 {"format":"claude","expect":"allow","input":{"tool_name":"PowerShell","tool_input":{"command":"Expand-Archive python.zip -DestinationPath C:\\work\\py; Get-ChildItem C:\\work\\py"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"tar czf x.tgz ~;"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"zip -r out.zip ~"}}}
+{"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"git commit -m \"fix .env, ~/.ssh, .claude/settings.json, opencode.json, rg ~\" && git push origin main"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"git commit -m \"$(cat ~/.netrc)\""}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"git commit -m \"`cat ~/.netrc`\""}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"git commit -F ~/.netrc"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"git commit -m \"ok\" && cat ~/.netrc"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"git -C ~/.ssh commit -m \"ok\""}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"git commit -m \"ok\" ~/.netrc"}}}
+{"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"ls ~ && rg TODO src"},"cwd":"/home/u/proj"}}
+{"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"cd ~ && ls && cd /home/u/proj && rg TODO ."}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"(cd /tmp) && rg token ."},"cwd":"~"}}
+{"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"sha256sum ~/.claude/hooks/ai-global-config-guard.py guards/guard.py"}}}
+{"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"python3 guards/test_guard.py ~/.codex/hooks/ai-global-config-guard.py"}}}
+{"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"ls -ld ~/.claude/settings.json ~/.codex/hooks.json 2>&1 || true"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"sha256sum ~/.ssh/id_ed25519"}}}
+{"format":"claude","expect":"ask","input":{"tool_name":"Bash","tool_input":{"command":"python3 -c \"open('/home/u/.claude/settings.json','w')\" test_guard.py"}}}
+{"format":"agy","expect":"allow","input":{"toolCall":{"name":"edit_file","args":{"Path":"/home/u/p/opencode-permissions.json","Target":"\"*.env.*\"","Replacement":"\"*/.env*\""}}}}
+{"format":"agy","expect":"deny","input":{"toolCall":{"name":"edit_file","args":{"Path":"/home/u/.netrc","Target":"a","Replacement":"b"}}}}
+{"format":"agy","expect":"ask","input":{"toolCall":{"name":"edit_file","args":{"Path":"/home/u/.gemini/config/hooks/ai-global-config-guard.py","Target":"a","Replacement":"b"}}}}
+{"format":"agy","expect":"allow","input":{"toolCall":{"name":"run_command","args":{"CommandLine":"git add a && git commit -m \"fix .env and .gemini/config/hooks\" && git push origin main"}}}}
+{"format":"codex","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"git commit -m \"fix .codex/hooks.json and .env\" && git push origin main"}}}
+{"format":"codex","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"python3 guards/test_guard.py ~/.codex/hooks/ai-global-config-guard.py"}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"run_shell_command","tool_input":{"command":"cat ~/.netrc"}}}
+{"format":"gemini","expect":"allow","input":{"tool_name":"run_shell_command","tool_input":{"command":"ls -la ~/.ssh/id_ed25519"}}}
+{"format":"gemini","expect":"allow","input":{"tool_name":"run_shell_command","tool_input":{"command":"git commit -m \"fix .env and .gemini/settings.json\" && git push origin main"}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"read_file","tool_input":{"file_path":"/home/u/.gemini/oauth_creds.json"}}}
+{"format":"gemini","expect":"allow","input":{"tool_name":"replace","tool_input":{"file_path":"/home/u/p/guard.py","old_string":".netrc","new_string":".netrc|x"}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"replace","tool_input":{"file_path":"/home/u/.netrc","old_string":"a","new_string":"b"}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"replace","tool_input":{"file_path":"/home/u/.gemini/settings.json","old_string":"a","new_string":"b"}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"write_file","tool_input":{"file_path":"/home/u/.gemini/hooks/ai-global-config-guard.py","content":"x"}}}
+{"format":"gemini","expect":"allow","input":{"tool_name":"read_file","tool_input":{"file_path":"/home/u/.gemini/settings.json"}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"search_file_content","tool_input":{"pattern":"token","dir_path":"~"}}}
+{"format":"gemini","expect":"allow","input":{"tool_name":"search_file_content","tool_input":{"pattern":"TODO","dir_path":"/home/u/proj"}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"read_many_files","tool_input":{"include":["/home/u/.ssh/id_ed25519"]}}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"read_many_files","tool_input":{"include":["**/*"]},"cwd":"~"}}
+{"format":"gemini","expect":"allow","input":{"tool_name":"read_many_files","tool_input":{"include":["projects/app/README.md"]},"cwd":"~"}}
+{"format":"gemini","expect":"deny","input":{"tool_name":"list_directory","tool_input":{"dir_path":"/home/u/.ssh"}}}
+{"format":"gemini","expect":"allow","input":{"tool_name":"list_directory","tool_input":{"dir_path":"/home/u/proj"}}}

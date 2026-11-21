@@ -176,7 +176,7 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
 6. 강제 장치를 확인합니다.
    - `python3 guards/test_guard.py <설치한 판정기>`가 실패 없이 끝납니다.
    - 설치한 판정기의 SHA-256이 `guards/guard.py`의 SHA-256과 같습니다.
-   - `python3 guards/test_guard.py --hook <claude|codex|agy>`가 실패 없이 끝납니다. 이 명령은
+   - `python3 guards/test_guard.py --hook <claude|codex|agy|gemini>`가 실패 없이 끝납니다. 이 명령은
      설정 파일(Claude Code는 managed settings도)에 들어 있는 강제 장치 명령을 쓰인 그대로 모두
      실행합니다. exec form 항목은 바로 실행하고, shell form 항목은 시스템 shell로 실행합니다.
      막혀야 하는 입력 하나와 허용되어야 하는 입력 하나를 넣습니다. credential은 열지 않습니다.
@@ -196,6 +196,7 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
 | Claude Code | `~/.claude/hooks/ai-global-config-guard.py`, 또는 managed settings 디렉터리의 `hooks/ai-global-config-guard.py` | `~/.claude/settings.json`, 또는 `managed-settings.json` | `guards/claude-settings.json` |
 | Codex CLI | `~/.codex/hooks/ai-global-config-guard.py` | `~/.codex/hooks.json` | `guards/codex-hooks.json` |
 | Antigravity CLI (agy) | `~/.gemini/config/hooks/ai-global-config-guard.py` | `~/.gemini/config/hooks.json` | `guards/agy-hooks.json` |
+| Gemini CLI | `~/.gemini/hooks/ai-global-config-guard.py` | `~/.gemini/settings.json` | `guards/gemini-settings.json` |
 | OpenCode | 없음: 권한 규칙과 정책 | `~/.config/opencode/opencode.jsonc`, root로는 시스템 파일도 | `guards/opencode-permissions.json` |
 
 강제 장치는 실수와 흔한 시도를 막습니다. 완전한 보안 경계는 아닙니다.
@@ -213,8 +214,10 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
   `PATH` 앞쪽의 파일이 있으면 그 확인이 읽기로 바뀔 수 있습니다.
 - 강제 장치 자신과 hook 설정의 보호도 이름으로 판정하므로, 간접적으로 닿는 명령은 막지
   못합니다.
-- 그런 파일 이름이 들어간 무해한 명령은 막을 수 있습니다. 예를 들어 `.ssh`를 언급하는 commit
-  메시지나 `docker compose --env-file .env`가 그렇습니다.
+- 그런 파일 이름이 들어간 무해한 명령은 막을 수 있습니다. 예를 들어
+  `docker compose --env-file .env`가 그렇습니다. shell 명령 치환이 없는 문자
+  그대로의 `git commit -m`, `git tag -m`, `git merge -m`, `git notes -m`
+  메시지와 작은따옴표 `git commit -F - <<'EOF'` heredoc은 허용합니다.
 - 사용자가 Rule SECRET-1에 따라 명시적으로 허락한 읽기도 막습니다. 사용자가 허락했는지 판정기는
   알 수 없기 때문입니다. 그 단계는 사용자가 도구 밖 터미널에서 합니다.
 - 다른 hook(plugin, skill, 에이전트 정의, 작업 공간 파일에서 온 hook)은 강제 장치가 허용한
@@ -246,6 +249,12 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
   실행된다고 보고 대합니다. 온라인 문서는 `"allow"`가 호출을 다음 hook이나 기본 정책에
   넘긴다고 적지만, 1.5.13 버전에 들어 있는 문서는 `"allow"`가 호출을 승인한다고 적습니다. 두
   번째 해석이 맞다면, 강제 장치 때문에 agy의 승인 확인이 생략됩니다.
+- Gemini CLI: `BeforeTool` hook은 밀리초 단위 `timeout`(설정 조각은 10초에
+  해당하는 `10000`을 씀)과 정규식 `matcher`(`".*"`)를 쓰며, `"allow"`와
+  `"deny"` 결정만 지원합니다(`"ask"` 결정이 없음). 그래서 강제 장치는 자기
+  파일이나 `~/.gemini/settings.json`을 바꾸는 호출 앞에서 묻는 대신
+  막습니다. `BeforeTool` hook이 시간 초과되면 Gemini CLI는 fail-open으로
+  동작해 도구 호출을 그대로 실행합니다.
 - OpenCode 권한 규칙은 명령 글 전체로 일치를 판단하므로 hook보다 거칩니다. 나중에 읽히는
   규칙(에이전트나 프로젝트의 규칙)이 경로를 다시 허용할 수 있습니다. 마지막에 일치한 규칙이
   이기기 때문입니다. 설정 조각의 정책이 이 빈틈을 막습니다. OpenCode는 넓은 범위의 파일에 든

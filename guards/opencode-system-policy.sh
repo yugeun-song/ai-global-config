@@ -127,7 +127,20 @@ if not policies:
     sys.exit(f"No policies found in {src}")
 
 merged = load(dst) if os.path.exists(dst) else {"$schema": "https://opencode.ai/config.json"}
-existing = merged.get("policies", [])
+LEGACY_ENV_RESOURCES = {
+    f"{prefix}{pat}"
+    for prefix in ("", "read:", "edit:", "shell:")
+    for pat in ("*.env", "*.env *", "*.env.*", "*.env-*", "*.env_*")
+}
+existing = [
+    p for p in merged.get("policies", [])
+    if not (
+        isinstance(p, dict)
+        and p.get("action") == "tool.use"
+        and p.get("effect") == "deny"
+        and p.get("resource") in LEGACY_ENV_RESOURCES
+    )
+]
 merged["policies"] = existing + [p for p in policies if p not in existing]
 
 fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(dst)), prefix=".opencode-policy.")

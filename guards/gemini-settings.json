@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "name": "ai-global-config-guard",
+            "type": "command",
+            "command": "\"<python3>\" -I -S \"<home>/.gemini/hooks/ai-global-config-guard.py\" gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  }
+}

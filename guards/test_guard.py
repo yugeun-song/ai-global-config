@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 import subprocess
@@ -9,11 +10,13 @@ CONFIGS = {
     "claude": os.path.join("~", ".claude", "settings.json"),
     "codex": os.path.join(os.environ.get("CODEX_HOME") or os.path.join("~", ".codex"), "hooks.json"),
     "agy": os.path.join("~", ".gemini", "config", "hooks.json"),
+    "gemini": os.path.join("~", ".gemini", "settings.json"),
 }
 PROBES = {
     "claude": ({"tool_name": "Bash", "tool_input": {"command": "cat ~/.netrc"}}, {"tool_name": "Bash", "tool_input": {"command": "ls"}}),
     "codex": ({"tool_name": "Bash", "tool_input": {"command": "cat ~/.netrc"}}, {"tool_name": "Bash", "tool_input": {"command": "ls"}}),
     "agy": ({"toolCall": {"name": "run_command", "args": {"CommandLine": "cat ~/.netrc"}}}, {"toolCall": {"name": "run_command", "args": {"CommandLine": "ls"}}}),
+    "gemini": ({"tool_name": "run_shell_command", "tool_input": {"command": "cat ~/.netrc"}}, {"tool_name": "run_shell_command", "tool_input": {"command": "ls"}}),
 }
 
 
@@ -63,7 +66,7 @@ def check_hook(tool):
             for expect, event in zip(("deny", "allow"), PROBES[tool]):
                 result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, input=json.dumps(event).encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
                 out = result.stdout.decode("utf-8", errors="replace").strip()
-                if tool == "agy":
+                if tool in ("agy", "gemini"):
                     try:
                         got = json.loads(out).get("decision")
                     except ValueError:
@@ -109,20 +112,69 @@ def verdict(fmt, payload):
         return "error: timeout"
     if result.returncode == 2:
         err = result.stderr.decode("utf-8", errors="replace")
-        if fmt != "agy" and ("Blocked by the ai-global-config guard" in err or "The ai-global-config guard protects" in err):
+        if fmt not in ("agy", "gemini") and ("Blocked by the ai-global-config guard" in err or "The ai-global-config guard protects" in err):
             return "deny"
         return f"error {result.returncode}"
     if result.returncode != 0:
         return f"error {result.returncode}"
     out = result.stdout.decode("utf-8", errors="replace").strip()
     if not out:
-        return "error: no output" if fmt == "agy" else "allow"
+        return "error: no output" if fmt in ("agy", "gemini") else "allow"
     try:
         data = json.loads(out)
     except ValueError:
         return "error: bad output"
     decision = data.get("decision") or data.get("hookSpecificOutput", {}).get("permissionDecision")
     return {"deny": "deny", "force_ask": "ask", "ask": "ask"}.get(decision, "allow")
+
+
+def check_opencode_fragment():
+    path = os.path.join(here, "opencode-permissions.json")
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    perms = data.get("permissions", [])
+    policies = data.get("policies", [])
+
+    def eval_perms(action, resource):
+        effect = "allow"
+        for rule in perms:
+            if (rule["action"] == "*" or rule["action"] == action) and fnmatch.fnmatchcase(resource, rule["resource"]):
+                effect = rule["effect"]
+        return effect
+
+    def eval_policies(resource):
+        effect = "allow"
+        for rule in policies:
+            if rule["action"] == "tool.use" and fnmatch.fnmatchcase(resource, rule["resource"]):
+                effect = rule["effect"]
+        return effect
+
+    checks = [
+        ("perm", "read", ".env", "deny"),
+        ("perm", "read", "/home/u/p/.env", "deny"),
+        ("perm", "read", "/home/u/p/.env.production", "deny"),
+        ("perm", "read", "/home/u/p/.env.example", "allow"),
+        ("perm", "shell", "cat .env", "deny"),
+        ("perm", "shell", "cat .env>/tmp/o", "deny"),
+        ("perm", "shell", "cat<.env", "deny"),
+        ("perm", "shell", "git commit -m \"fix vim.env.PATH handling\"", "allow"),
+        ("perm", "shell", "node -e \"console.log(process.env.HOME)\"", "allow"),
+        ("perm", "shell", "git push origin main", "allow"),
+        ("perm", "read", "/home/u/p/environment.md", "allow"),
+        ("policy", None, "read:.env", "deny"),
+        ("policy", None, "read:/home/u/p/.env.local", "deny"),
+        ("policy", None, "read:/home/u/p/.env.example", "allow"),
+        ("policy", None, "shell:cat .env.production", "deny"),
+        ("policy", None, "shell:git commit -m \"fix vim.env.PATH\" && git push origin main", "allow"),
+        ("policy", None, "shell:node -e \"console.log(process.env.HOME)\"", "allow"),
+    ]
+    bad = 0
+    for kind, action, resource, expect in checks:
+        got = eval_perms(action, resource) if kind == "perm" else eval_policies(resource)
+        if got != expect:
+            bad += 1
+            print(f"FAIL opencode {kind} ({action or 'tool.use'} {resource}): expected {expect}, got {got}")
+    return len(checks), bad
 
 
 failures = 0
@@ -141,6 +193,9 @@ words = " ".join(f"word{i}" for i in range(1000))
 long = [
     ("claude", {"tool_name": "Bash", "tool_input": {"command": f'git commit -m "{words}"'}}, "allow"),
     ("claude", {"tool_name": "PowerShell", "tool_input": {"command": f"git commit -m @'\n{words}\n'@"}}, "allow"),
+    ("agy", {"toolCall": {"name": "run_command", "args": {"CommandLine": f'git add a && git commit -m "{words} ~/.ssh .env .claude/settings.json rg ~" && git push origin main'}}}, "allow"),
+    ("gemini", {"tool_name": "run_shell_command", "tool_input": {"command": f"git commit -F - <<'EOF'\n{words}\n~/.ssh .env .gemini/settings.json rg ~\nEOF\ngit push origin main"}}, "allow"),
+    ("gemini", {"tool_name": "run_shell_command", "tool_input": {"command": "git commit -F - <<'EOF'\nsafe body\nEOF\ncat ~/.netrc"}}, "deny"),
 ]
 for fmt, event, expect in long:
     count += 1
@@ -170,6 +225,10 @@ for fmt, event in slow:
     if time.monotonic() - start > 2:
         failures += 1
         print(f"FAIL vector {count}: took {time.monotonic() - start:.1f} s")
+
+oc_count, oc_bad = check_opencode_fragment()
+count += oc_count
+failures += oc_bad
 
 print(f"{count} vectors, {failures} failed")
 sys.exit(1 if failures else 0)
