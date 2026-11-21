@@ -112,9 +112,11 @@ Gemini CLI, OpenCode, Cursor, Hermes Agent를 비롯한 모든 에이전트가 �
     이 경우에는 trailer를 붙입니다.
   - forge가 저장소 contributor 목록에 AI 계정을 보여 줍니다.
 
-  trailer는 자기 도구가 기본으로 붙이는 것을 씁니다. 도구가 붙이는 trailer가 없으면 저장소가 그
-  도구에 정해 둔 trailer를 쓰고, 그것도 없으면 붙이지 않습니다. forge는 `Co-authored-by` trailer를
-  그 주소를 가진 계정의 기여로 기록하므로, 이 trailer에는 도구 제작사가 그 용도로 공개한 주소만
+  위 경우 가운데 하나라도 해당하면 trailer를 붙입니다. trailer는 자기 도구가 기본으로 붙이는 것을
+  씁니다. 도구가 붙이는 trailer가 없으면 저장소가 그 도구에 정해 둔 trailer를 쓰고, 그것도 없으면
+  붙이지 않습니다. OpenCode에서는
+  `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`를 씁니다.
+  forge는 `Co-authored-by` trailer를 그 주소를 가진 계정의 기여로 기록하므로, 이 trailer에는 도구 제작사가 그 용도로 공개한 주소만
   씁니다. 추측한 주소나 다른 제품·다른 사람의 주소는 절대 쓰지 않습니다. 그런 주소가 없는 도구는
   어떤 계정의 기여로도 기록되지 않는 `Assisted-by:` trailer에 이름만 남깁니다. trailer를 붙이든
   빼든, 이 규칙에 관한 내용은 작업물 자체에 쓰지 않습니다(Rule OUTPUT-6).

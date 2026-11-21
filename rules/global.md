@@ -131,9 +131,11 @@ load the same text.
     commit yourself. In this case, add the trailer.
   - The forge lists an AI account among the repository's contributors.
 
-  Use the trailer that your tool adds by default. When your tool adds none,
-  use the trailer that the repository names for your tool, and otherwise
-  add none. The forge credits a `Co-authored-by` trailer to whichever
+  When one of these cases holds, add the trailer. Use the trailer that your
+  tool adds by default. When your tool adds none, use the trailer that the
+  repository names for your tool, and otherwise add none. For OpenCode, use
+  `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`.
+  The forge credits a `Co-authored-by` trailer to whichever
   account owns its address, so give it only an address that the tool's
   maker publishes for that purpose. NEVER put a guessed address there, or
   an address of another product or person. Name a tool without such an

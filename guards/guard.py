@@ -89,6 +89,7 @@ READ_ONLY_TOOLS = {
     "list_directory", "find_by_name", "grep_search", "search_file_content",
     "websearch", "webfetch", "search_web", "google_web_search", "web_fetch",
     "read_url_content", "todowrite", "agent", "task", "ask_user",
+    "invoke_subagent", "ask_question",
 }
 SEARCH_GLOB_KEYS = {
     "grep": ("glob",),
@@ -121,6 +122,7 @@ READ_ONLY_CMDS = {
     "ls", "stat", "test", "[", "wc", "file", "diff", "cmp", "sha256sum", "shasum",
     "md5sum", "cksum", "readlink", "realpath", "which", "true", "false",
     "get-content", "get-filehash", "get-item", "get-childitem", "test-path", "type", "dir",
+    "echo", "printf", "write-output",
 }
 READ_ONLY_PIPE_SINKS = {
     "jq", "head", "tail", "grep", "egrep", "fgrep", "rg", "wc", "sort", "uniq",
@@ -132,13 +134,16 @@ GIT_GLOBAL_VALUE_FLAGS = {"-c", "--git-dir", "--work-tree", "--namespace", "--co
 GIT_MESSAGE_SUBS = {"commit", "tag", "merge", "notes"}
 GIT_SHORT_M = re.compile(r"^-[asevqnoSu]*m$")
 HEREDOC_OPEN = re.compile(r"<<(-?)([\"'])([A-Za-z0-9_]+)\2")
-CAT_MESSAGE = re.compile(r"(?:^|\s)(?:-[asevqnoSu]*m|--message)(?:\s+|=)\"\$\(\s*cat\s*$")
+CAT_MESSAGE = re.compile(
+    r"(?:^|\s)(?:-[asevqnoSu]*m|--message|--title|--body|--notes|--subject|--body-file)"
+    r"(?:\s+|=)\"\$\(\s*cat\s*$"
+)
 CAT_MESSAGE_CLOSE = re.compile(r"\s*\)\"")
 MESSAGE_SOURCES = {"echo", "printf", "write-output"}
 GH_TEXT_SUBS = {"pr", "issue", "release"}
 GH_TEXT_ACTIONS = {"create", "edit", "comment", "review", "merge"}
 GH_TEXT_FLAGS = {"--title", "-t", "--body", "-b", "--notes", "-n", "--subject"}
-PYTHON_CMDS = {"python", "python3", "python.exe", "py", "py.exe"}
+PYTHON_CMD = re.compile(r"^(?:python(?:\d+(?:\.\d*)?)?|py)(?:\.exe)?$", re.IGNORECASE)
 PYTHON_SAFE_FLAGS = {"-I", "-S", "-B", "-u", "-E", "-s"}
 SEP = r"[\\/]" if os.name == "nt" else "/"
 ROOT = re.compile(SEP + "*")
@@ -539,11 +544,15 @@ def git_subcommand_index(toks):
 
 
 def reads_stdin_message(words):
-    return any(w == "--file=-" or (w in ("-F", "--file") and k + 1 < len(words) and words[k + 1] == "-") for k, w in enumerate(words))
+    return any(
+        w == "--file=-" or (w in ("-F", "--file", "--body-file") and k + 1 < len(words) and words[k + 1] == "-")
+        for k, w in enumerate(words)
+    )
 
 
 def strip_git_heredocs(command):
-    if "<<" not in command or "git" not in command.lower():
+    lowered = command.lower()
+    if "<<" not in command or ("git" not in lowered and "gh" not in lowered):
         return command
     lines = command.splitlines(keepends=True)
     out = []
@@ -559,12 +568,13 @@ def strip_git_heredocs(command):
             segs = split_segments(prefix)
             tail = segs[-1][1] if segs else ""
             toks = scan_simple_tokens(tail)
-            sub_idx = git_subcommand_index(toks)
+            found = message_options(toks)
             literal = in_cat = False
-            if sub_idx is not None and toks[sub_idx][2] in GIT_MESSAGE_SUBS:
+            if found is not None:
+                k, _, _ = found
                 if CAT_MESSAGE.search(tail) and not line[match.end():].strip():
                     literal = in_cat = True
-                elif reads_stdin_message([t[2] for t in toks[sub_idx + 1:]]):
+                elif reads_stdin_message([t[2] for t in toks[k:]]):
                     literal = True
             if literal:
                 j = i + 1
@@ -749,6 +759,8 @@ def is_read_only_stage(stage, is_pipe_sink):
     if not toks:
         return False
     cmd = os.path.basename(toks[0]).lower()
+    if not is_pipe_sink and len(toks) == 2 and toks[1].lower() in ("--version", "version", "--help"):
+        return True
     if is_pipe_sink:
         if cmd not in READ_ONLY_PIPE_SINKS:
             return False
@@ -771,10 +783,19 @@ def is_read_only_stage(stage, is_pipe_sink):
                 break
             if i >= len(toks) or toks[i].lower() not in READ_ONLY_GIT_SUBS:
                 return False
-        elif cmd in PYTHON_CMDS:
+        elif PYTHON_CMD.match(cmd):
             i = 1
-            while i < len(toks) and toks[i] in PYTHON_SAFE_FLAGS:
-                i += 1
+            module = None
+            while i < len(toks):
+                if toks[i] in PYTHON_SAFE_FLAGS:
+                    i += 1
+                elif toks[i] == "-m" and i + 1 < len(toks):
+                    module = toks[i + 1]
+                    i += 2
+                else:
+                    break
+            if module == "json.tool":
+                return i + 1 == len(toks)
             if i >= len(toks) or toks[i].startswith("-"):
                 return False
             if os.path.basename(toks[i]).lower() != "test_guard.py":
@@ -799,7 +820,7 @@ def is_read_only_command(command):
     segments = split_segments(command)
     has_any = False
     for _, seg in segments:
-        if not seg.strip():
+        if not seg.strip() or PURE_CD.match(seg.strip()):
             continue
         has_any = True
         stages = split_pipes(seg)
@@ -845,6 +866,22 @@ def resolve_cd_targets(cd_targets, current_bases):
     return with_real(list(dict.fromkeys(resolved))[:MAX_BASES])
 
 
+def chain_cd_targets(cd_targets, bases):
+    resolved = list(bases)
+    for target in cd_targets:
+        exp = expand(target)
+        roots = [base for base in resolved if base]
+        candidates = [exp] if os.path.isabs(exp) or not roots else [
+            os.path.normpath(os.path.join(root, exp)) for root in roots[-MAX_BASES:]
+        ]
+        for candidate in candidates:
+            if candidate not in resolved:
+                resolved.append(candidate)
+            if len(resolved) >= MAX_BASES:
+                return with_real(list(dict.fromkeys(resolved))[:MAX_BASES])
+    return with_real(list(dict.fromkeys(resolved))[:MAX_BASES])
+
+
 def check_command(command, bases):
     if not command:
         return "allow"
@@ -854,7 +891,7 @@ def check_command(command, bases):
     cd_bases = [expand(m) for m in cd_words]
     base_list = list(bases)
     base_set = set(base_list)
-    all_bases = list(dict.fromkeys(base_list + cd_bases))
+    all_bases = chain_cd_targets(cd_bases, base_list)
     first_pass = {}
     for word in words:
         found = path_forms(word, base_list)
