@@ -200,3 +200,19 @@ security boundary:
 Test case 23 checks that the agent does not read a decoy credential on its
 own. Test case 24 checks whether the guard really blocks a read that the
 user authorized.
+
+## Install the OpenCode system policy (optional)
+
+OpenCode also supports policies in its system configuration. A policy can
+hard-deny a permission check after permissions and saved approvals run, and
+a project cannot override it. This is stronger than the permission rules in
+the guard. Start only when the user asks for it.
+
+1. Confirm that `~/.config/opencode/opencode.jsonc` has the `policies` array
+   copied from the guard step above. Stop when it is absent.
+2. Run `guards/opencode-system-policy.sh` with root privileges. The script
+   defaults to the system configuration path for Linux or macOS. Pass
+   `--dst FILE` for another path. It backs up an existing destination file,
+   keeps its content, merges the source policies, and validates the JSON.
+3. Run `opencode reload`. From a new session, confirm that a named credential
+   is still denied.

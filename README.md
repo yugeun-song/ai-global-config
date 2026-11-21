@@ -30,7 +30,7 @@ keep working after the clone is deleted.
 | `rules/parts/` | the same rules cut into one file per section, for tools that cap the size of a rule file |
 | `INSTALL.md` | how an agent installs or updates the rules |
 | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | short pointers for agents that work in this repository |
-| `guards/` | the optional guard: one Python 3 script and a configuration fragment per tool |
+| `guards/` | the optional guard: one Python 3 script and a configuration fragment per tool, plus an OpenCode system-policy script |
 | `tests/` | test cases and their runner |
 | `ko/` | Korean translations with the same content, for Korean readers |
 
@@ -63,7 +63,9 @@ The rules are text. The optional guard in `guards/` makes a tool refuse a
 tool call that names a credential, through the hook or permission rules
 that the tool documents: hooks for Claude Code, Codex and agy, permission
 rules for OpenCode. The hooks need Python 3. `INSTALL.md` describes how
-to install the guard, and `python3 guards/test_guard.py` checks it.
+to install the guard, and `python3 guards/test_guard.py` checks it. OpenCode
+can also install its policies into the system configuration with
+`guards/opencode-system-policy.sh`, which root privileges are needed to run.
 
 ## Maintenance
 
