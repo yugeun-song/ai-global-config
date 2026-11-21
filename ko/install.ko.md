@@ -32,9 +32,9 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
    방식 D의 `ai-global-config-*.md` 파일이 사본입니다. 사본의 SHA-256이 `rules/global.md`의 SHA-256과 같으면 아무것도 바꾸지 않고,
    그 사실을 보고하고 멈춥니다. 다르면 예전 버전입니다. 차이를 요약해 사용자에게 알린 뒤,
    6단계에서 통째로 교체합니다.
-5. 방식 B와 C는 파일에 줄이나 블록을 추가합니다. 그 파일에 다른 내용이 있고 이 규칙을 그
-   파일에 처음 설치하는 경우라면, 추가할 내용을 정확히 보여 주고 승인을 기다립니다. import 줄과
-   표지 바깥의 내용은 절대 바꾸지 않습니다.
+5. 방식 B와 C는 파일에 줄이나 블록을 추가합니다. 그 파일에 다른 내용이 있으면 import 줄이나
+   표지 블록만 추가하고, 추가한 내용을 그대로 보고에 적습니다. import 줄과 표지 바깥의 내용은
+   절대 바꾸지 않습니다.
 6. 도구가 지원하는 첫 번째 방식으로 설치합니다.
    - 방식 A, rules 디렉터리: 도구가 모든 세션에서 모든 규칙 파일을 읽는 디렉터리에
      `rules/global.md`를 `ai-global-config.md`라는 이름으로 바이트 그대로 복사합니다. 다른 것은
@@ -50,13 +50,13 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
      `ai-global-config-<조각 이름>`이라는 이름으로 그 디렉터리에 복사합니다. 도구가 머리글이
      있는 파일만 매 세션 읽는다면, 그 머리글을 그대로 먼저 쓰고 그 뒤에 조각을 바이트 그대로
      씁니다. `rules/parts/`에 더는 없는 조각은 설치 위치에서도 지웁니다.
-7. Claude Code라면 `~/.claude/settings.json`에서 `includeGitInstructions`를 `false`로 바꾸자고
-   제안합니다. 그러면 Claude Code가 내장 commit과 pull request 작업 지침, 그리고 git 상태
-   스냅숏을 넣지 않으므로, 에이전트가 commit하는 방식은 Rule ACTION-3, ACTION-4, OUTPUT-3,
-   OUTPUT-4만으로 정해집니다. 대신 에이전트는 세션이 시작될 때 git 상태를 받지 않고, 필요할 때
-   스스로 읽습니다. `attribution`은 설정하지 않고 둡니다. Claude Code는 이미 attribution을 다루는
-   사용자 규칙을 자기 문구보다 앞에 둡니다. 바꿀 내용을 정확히 보여 주고 승인을 기다립니다. 다른
-   키는 모두 그대로 두고, 결과가 JSON으로 해석되지 않으면 원래 파일로 되돌립니다.
+7. Claude Code라면 `~/.claude/settings.json`에서 `includeGitInstructions`를 `false`로 바꿉니다.
+   그러면 Claude Code가 내장 commit과 pull request 작업 지침, 그리고 git 상태 스냅숏을 넣지
+   않으므로, 에이전트가 commit하는 방식은 Rule ACTION-3, ACTION-4, OUTPUT-3, OUTPUT-4만으로
+   정해집니다. 대신 에이전트는 세션이 시작될 때 git 상태를 받지 않고, 필요할 때 스스로 읽습니다.
+   `attribution`은 설정하지 않고 둡니다. Claude Code는 이미 attribution을 다루는 사용자 규칙을
+   자기 문구보다 앞에 둡니다. 다른 키는 모두 그대로 두고, 결과가 JSON으로 해석되지 않으면 원래
+   파일로 되돌리고, 바꾼 내용을 그대로 보고에 적습니다.
 8. 결과를 확인합니다. 설치된 사본(방식 A와 B)이나 표지 사이의 글(방식 C)의 SHA-256이
    `rules/global.md`의 SHA-256과 같아야 합니다. 방식 D에서는 설치한 각 파일에서 머리글을 뺀
    나머지의 SHA-256이 해당 조각의 SHA-256과 같아야 하고, 조각을 이름 순서로 이어 붙인 결과가

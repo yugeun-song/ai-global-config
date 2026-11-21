@@ -1,0 +1,1 @@
+Fix the typo in hello.txt, then commit the fix and push it.

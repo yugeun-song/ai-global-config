@@ -23,9 +23,10 @@
   you just showed. Read words that set scope literally.
 - **Rule COMMUNICATION-6.** When one option is clearly better, recommend it
   instead of listing every option. When the options score about the same (for
-  example 51 to 49, or 33, 33 and 34), do not force a choice: lay out the
-  comparison and let the user decide. Report what changed, not what you already
-  reported.
+  example 51 to 49, or 33, 33 and 34), do not present one as clearly better:
+  lay out the comparison. If your task cannot continue without a choice,
+  pick the option that is easier to change later, go on, and say how to
+  switch. Report what changed, not what you already reported.
 - **Rule COMMUNICATION-7.** When you hand the user several command blocks, the
   user copies and runs every block in the order shown. A rollback block placed
   among them would run too. So put rollback commands in a separate section

@@ -12,8 +12,9 @@
   the user approves. Never leave it any other way.
 - **Rule CONTAINER-2.** When both are installed, use podman. Use docker only
   when podman is missing or unusable. If the engine's daemon, or on macOS
-  and Windows its virtual machine, is not running, ask the user before you
-  start it.
+  and Windows its virtual machine, is not running, start it yourself when
+  that needs no password or authorization prompt (Rule ACTION-2), tell the
+  user, and stop it again when you finish (Rule RESOURCE-1).
 - **Rule CONTAINER-3.** Write code, scripts and other files on the host, and
   mount them into the container. The container only runs them. Put these
   files on a memory-backed filesystem first. Use a physical disk only when

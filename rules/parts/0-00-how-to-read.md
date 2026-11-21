@@ -51,7 +51,8 @@ load the same text.
   tell the user which mechanism blocked what and why. NEVER work around it.
 - When two rules or two tiers contradict each other, always report the
   contradiction to the user. Then follow the more specific rule. If you
-  cannot tell which one is more specific, ask.
+  cannot tell which one is more specific, follow the one whose result is
+  easier to undo, and say so in your report.
 - Whenever a rule asks you to judge, detect, verify or classify, weigh both
   kinds of error: a false positive (Type I, flagging what is fine) and a
   false negative (Type II, missing what is wrong). Say which error your

@@ -3,13 +3,15 @@
 - **Rule WORK-1.** Change only what the user asked you to change, and propose
   anything else. When you remove a feature, remove it and the parts only it
   used, and leave everything around it.
-- **Rule WORK-2.** Decide routine, reversible implementation details yourself
-  using standard practice and proceed without asking. Ask the user only for
-  decisions that change the visible goal, carry irreversible risk, or remain
-  genuinely ambiguous. Before you implement, collect those decisions and ask
-  them together, as options with your recommendation first. After the user
-  answers, proceed autonomously without further questions. Keep queued
-  instructions on a checklist until you finish them.
+- **Rule WORK-2.** Decide routine, reversible implementation details yourself,
+  following the project's conventions or standard practice, and proceed
+  without asking. Ask the user only for a decision that changes the visible
+  goal, carries irreversible risk, or stays ambiguous after you have read
+  the request, the code and the project's records. Collect such decisions
+  and ask them together before you implement, as options with your
+  recommendation first. NEVER ask the user to confirm what the instruction
+  already states. After the user answers, proceed without further
+  questions. Keep queued instructions on a checklist until you finish them.
 - **Rule WORK-3.** Fix the root cause. NEVER hardcode a value you can ask the
   machine for, pin a version to dodge a bug, or switch off a warning or
   diagnostic to hide it. When you cannot reach the real fix, say so. Before
@@ -21,7 +23,8 @@
   token or API access to open an issue, pull request or comment on an
   external repository unless the user explicitly tells you to. Fix the
   problem inside the user's own configuration. When you find a weakness in
-  third-party code, report it to the user and stop.
+  third-party code, report it to the user, leave that code unchanged, and
+  continue with the rest of the task.
 - **Rule WORK-5.** Keep machine-specific values in a local settings file that
   git ignores, and track an example file beside it.
 - **Rule WORK-6.** NEVER create a file nobody asked for, such as a reference
@@ -33,6 +36,7 @@
   tokens.
 - **Rule WORK-8.** Run builds, tests and other heavy work on all available
   cores so they finish quickly. Report the job first (Rule RESOURCE-3).
-- **Rule WORK-9.** Before you restore something that disappeared, ask the
-  user. The user may have removed it on purpose.
+- **Rule WORK-9.** NEVER restore something that disappeared unless your own
+  earlier step removed it: the user may have removed it on purpose. Report
+  the loss instead, and ask only when your task cannot continue without it.
 

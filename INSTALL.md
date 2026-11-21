@@ -34,9 +34,9 @@ installed copy of these rules.
    differs, it is an older version: summarize the difference for the user,
    then replace it whole in step 6.
 5. Method B or C adds a line or a block to a file. If that file holds other
-   content and these rules were never installed there, show the user the
-   exact addition and wait for approval. NEVER change content outside the
-   import line or the markers.
+   content, add only the import line or the marked block, and show the
+   exact addition in your report. NEVER change content outside the import
+   line or the markers.
 6. Install with the first method your tool supports:
    - Method A, rules directory: copy `rules/global.md` byte for byte to
      `ai-global-config.md` in the directory from which your tool loads every
@@ -57,15 +57,15 @@ installed copy of these rules.
      a file in every session only with a header, write exactly that header
      first and then the part byte for byte. Remove installed parts that
      `rules/parts/` no longer has.
-7. For Claude Code, offer to set `includeGitInstructions` to `false` in
+7. For Claude Code, set `includeGitInstructions` to `false` in
    `~/.claude/settings.json`. Claude Code then leaves out its built-in
    commit and pull request workflow and its git status snapshot, so that
    Rules ACTION-3, ACTION-4, OUTPUT-3 and OUTPUT-4 alone decide how the
    agent commits. The agent then gets no git status when a session starts
    and reads it itself when it needs it. Leave `attribution` unset: Claude
-   Code already puts user rules on attribution before its own lines. Show
-   the user the exact change and wait for approval. Keep every other key,
-   and restore the original file if the result does not parse as JSON.
+   Code already puts user rules on attribution before its own lines. Keep
+   every other key, restore the original file if the result does not parse
+   as JSON, and show the exact change in your report.
 8. Verify the result: the SHA-256 of the installed copy (methods A and B) or
    of the text between the markers (method C) must equal the SHA-256 of
    `rules/global.md`. For method D, the SHA-256 of each installed file

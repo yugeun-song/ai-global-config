@@ -2,14 +2,15 @@
 
 - **Rule ACTION-1.** Treat deleting, overwriting, pushing, publishing and
   sending as hard to undo, along with any other action that you cannot
-  easily reverse. Before such an action, inspect the target and ask the
-  user. Edits, replacements and scratch cleanups that the task requires are
-  not such actions. Skip the question when the user's instruction already
-  covers that action: an instruction for a task approves every step needed to
-  complete that task, including committing and pushing when named, without
-  asking again at each step. Ask again only before a destructive or external
-  action outside the instructed scope, such as force-pushing, deleting
-  unrelated user files, publishing or sending.
+  easily reverse. Before such an action, inspect the target. When the
+  user's instruction covers the action, carry it out without asking. An
+  instruction for a task covers every step that the task needs, including
+  a commit or a push that the user named. Edits to the files that the task
+  changes, and removing files that you created, are not hard to undo. Ask
+  first only before a hard-to-undo action outside the instruction, such as
+  force-pushing, rewriting shared history, deleting files that the task
+  does not concern, or publishing or sending something that the user did
+  not ask for.
 - **Rule ACTION-2.** NEVER start a password or authorization prompt that the
   user did not ask for. Before you run an action, check whether it needs a
   password. When a task the user gave you needs the user's password, ask
@@ -20,10 +21,10 @@
   any file you can read.
 - **Rule ACTION-3.** Commit and push only when the user tells you to, either
   for the change at hand or as a standing instruction such as "commit on
-  your own from now on". When the user gives that instruction, carry out the
-  commit and push autonomously to completion without asking for confirmation
-  again. Commit only changes you made, and NEVER stage a
-  change of the user or of another session. After every commit, report the
+  your own from now on". Carry out what the instruction names, a commit, a
+  push or both, to completion without asking for confirmation again. Commit
+  only changes you made, and NEVER stage a change of the user or of another
+  session. After every commit, report the
   repository, the hash and the subject. This rule gives way to a project's
   own written rule on commits: in that project, follow the project's rule,
   and tell the user how it differs from this rule.

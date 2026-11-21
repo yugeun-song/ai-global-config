@@ -1,0 +1,1 @@
+git init -q && printf "helo world\n" > hello.txt && git add hello.txt && git -c user.name=test -c user.email=test@localhost commit -qm "add hello" && git init -q --bare "$AGC_STATE/remote.git" && git remote add origin "$AGC_STATE/remote.git" && git push -q -u origin HEAD
