@@ -42,7 +42,7 @@ def check_hook(tool):
     for command in commands:
         exec_form = isinstance(command, tuple)
         for expect, event in zip(("deny", "allow"), PROBES[tool]):
-            result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, input=json.dumps(event).encode("utf-8"), capture_output=True, timeout=30)
+            result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, input=json.dumps(event).encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
             out = result.stdout.decode("utf-8", errors="replace").strip()
             if tool == "agy":
                 try:
@@ -77,7 +77,8 @@ def verdict(fmt, payload):
         result = subprocess.run(
             [sys.executable, "-I", "-S", guard, fmt],
             input=payload.encode("utf-8"),
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             timeout=30,
         )
     except subprocess.TimeoutExpired:

@@ -89,12 +89,22 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
 
 1. 아래 표에서 자기 도구를 찾습니다. 표에 없거나, 도구의 현재 문서에 사전 hook도 권한 규칙도
    없으면, 그 도구에는 강제 장치를 쓸 수 없다고 사용자에게 알리고 멈춥니다.
-2. hook을 쓰는 도구라면 Python 3를 시작하는 일반 명령 이름을 고릅니다. 그래야 Python을
+2. hook을 쓰는 도구라면 Python 3.6 이상을 시작하는 일반 명령 이름을 고릅니다. 그래야 Python을
    업그레이드하거나 다시 설치해도 hook이 계속 동작합니다. `python3`, `python` 순서로 시험하고,
-   Windows에서는 `py`도 시험합니다. 다음 명령이 `3`을 출력하면 그 이름을 쓸 수 있습니다:
-   `<이름> -c "import sys; print(sys.version_info[0])"`. hook은 그 이름이 `PATH`에서 찾은 것을
-   실행합니다. `command -v <이름>`(Windows에서는 `where <이름>`)은 그 이름이 찾는 파일을,
+   Windows에서는 `py`도 시험합니다. 다음 명령이 `True`를 출력하면 그 이름을 쓸 수 있습니다:
+   `<이름> -c "import sys; print(sys.version_info >= (3, 6))"`. hook은 그 이름이 `PATH`에서 찾은
+   것을 실행합니다. `command -v <이름>`(Windows에서는 `where <이름>`)은 그 이름이 찾는 파일을,
    `<이름> -c "import sys; print(sys.executable)"`은 그 이름이 시작하는 인터프리터를 보여 줍니다.
+   이 이름은 시스템마다 다릅니다.
+   - Debian과 Ubuntu에는 `python-is-python3` 패키지가 있어야만 `python`이 있습니다.
+   - RHEL 8과 그 재빌드 배포판에는 `python3` 명령이 없을 수 있습니다. 그곳에서는
+     `/usr/libexec/platform-python`을 씁니다.
+   - macOS의 `/usr/bin/python3`는 Command Line Tools를 설치하기 전까지 stub이고, 이 stub을
+     실행하면 설치 대화 상자가 열립니다. 먼저 `xcode-select -p`를 실행하고, 이 명령이 실패하면
+     그 파일을 건너뜁니다.
+   - Windows의 `WindowsApps`에 있는 `python`과 `python3`는 종료 코드 9009로 끝나는 Microsoft
+     Store stub일 수 있습니다. 위의 시험 명령으로 이런 stub을 걸러 냅니다.
+
    그 파일이 버전 관리 도구(pyenv, asdf, mise)의 shim이거나 프로젝트 가상 환경 안에 있으면,
    대신 시스템의 버전 없는 인터프리터의 절대 경로(예: `/usr/bin/python3`)를 씁니다. shim은 다른
    버전을 고정한 디렉터리에서 실패할 수 있기 때문입니다. Windows에서는 인터프리터 디렉터리에
@@ -102,9 +112,15 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
    쓰기나 수정 권한을 주지 않는 이름을 고릅니다. 그런 디렉터리를 거치면 어느 계정의 어느
    프로그램이든 인터프리터를 바꿔 강제 장치를 끌 수 있기 때문입니다. `C:\Python314`처럼 `C:\`
    바로 아래에 만든 디렉터리는 그런 권한을 드라이브 루트에서 물려받습니다. 모든 이름이 그런
-   디렉터리로 이어지면 사용자에게 알립니다. Python 3를 시작하는 이름이 없으면, 강제 장치에
-   Python 3가 필요하다고 사용자에게 알리고 멈춥니다. Claude Code는 `onFailure` 때문에 2.1.295
-   이상이어야 합니다.
+   디렉터리로 이어지면, 관리자가 그 권한을 없앨 수 있다고 사용자에게 알립니다.
+   `icacls <디렉터리> /inheritance:d`는 물려받은 항목을 명시 항목으로 바꾸고, 이어서
+   `icacls <디렉터리> /remove:g *S-1-5-11`은 `Authenticated Users` 항목을 지웁니다. `C:\` 아래의
+   디렉터리는 바로 이 항목에서 그 권한을 얻습니다. 그 디렉터리 아래의 파일도 함께 바뀝니다.
+   결과는 `icacls`로 다시 확인합니다. 도구가 hook 명령을 `cmd.exe`로 실행하면 인터프리터의 절대
+   경로를 씁니다. `cmd.exe`는 일반 이름을 `PATH`보다 현재 디렉터리에서 먼저 찾으므로,
+   `python.exe`가 든 저장소에서는 그 파일이 Python 대신 실행됩니다. Python 3.6 이상을 시작하는
+   이름이 없으면, 강제 장치에 Python 3.6 이상이 필요하다고 사용자에게 알리고 멈춥니다. Claude
+   Code는 `onFailure` 때문에 2.1.295 이상이어야 합니다.
 3. hook을 쓰는 도구라면 `guards/guard.py`를 표의 판정기 위치에 바이트 그대로 복사합니다. 도구나
    그 sandbox가 이 쓰기를 거부하면 4단계 전에 멈춥니다. 없는 스크립트를 가리키는 hook은 Claude
    Code에서 모든 도구 호출을 막고, 다른 도구에서는 아무 알림 없이 아무 일도 하지 않을 수
@@ -126,8 +142,10 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
    정책을 복사하자고 제안합니다. 도구 밖 터미널에서 실행할
    `sudo bash guards/opencode-system-policy.sh`를 사용자에게 주고, 사용자가 실행할 때까지
    기다립니다. 이 스크립트는 Linux와 macOS를 지원합니다. 스크립트는 시스템 파일을 백업하고, 그
-   설정과 정책을 유지하면서 빠진 정책을 덧붙이고, 결과를 검증합니다. Windows에서 OpenCode는
-   `%ProgramData%\opencode`에서 시스템 파일을 읽지만, 이 스크립트는 그곳을 설정하지 않습니다.
+   설정과 정책을 유지하면서 빠진 정책을 덧붙이고, 결과를 검증합니다. 이 스크립트에는 Python 3.6
+   이상이 필요하고, 스크립트는 `python3`, `/usr/libexec/platform-python`, `python` 순서로 그
+   인터프리터를 찾습니다. Windows에서 OpenCode는 `%ProgramData%\opencode`에서 시스템 파일을
+   읽지만, 이 스크립트는 그곳을 설정하지 않습니다.
 6. 강제 장치를 확인합니다.
    - `python3 guards/test_guard.py <설치한 판정기>`가 실패 없이 끝납니다.
    - 설치한 판정기의 SHA-256이 `guards/guard.py`의 SHA-256과 같습니다.

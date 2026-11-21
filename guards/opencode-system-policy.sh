@@ -81,6 +81,22 @@ if [[ ! -f "$SRC" ]]; then
   exit 1
 fi
 
+PY=""
+for candidate in python3 /usr/libexec/platform-python python; do
+  path=$(command -v "$candidate" 2>/dev/null) || continue
+  if [[ "$(uname -s)" == Darwin && "$path" == /usr/bin/python3 ]] && ! xcode-select -p >/dev/null 2>&1; then
+    continue
+  fi
+  if "$path" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 6) else 1)' >/dev/null 2>&1; then
+    PY=$path
+    break
+  fi
+done
+if [[ -z "$PY" ]]; then
+  echo "Python 3.6 or later is needed as python3, /usr/libexec/platform-python or python." >&2
+  exit 1
+fi
+
 mkdir -p "$(dirname "$DST")"
 
 if [[ -f "$DST" ]]; then
@@ -89,7 +105,7 @@ if [[ -f "$DST" ]]; then
   echo "Backup: $BACKUP"
 fi
 
-python3 - "$SRC" "$DST" <<'PY'
+"$PY" - "$SRC" "$DST" <<'PY'
 import json
 import os
 import re
@@ -124,5 +140,5 @@ os.replace(tmp, dst)
 print(f"Policies in {dst}: {len(merged['policies'])}")
 PY
 
-python3 -m json.tool "$DST" >/dev/null
+"$PY" -m json.tool "$DST" >/dev/null
 echo "Done: $DST"

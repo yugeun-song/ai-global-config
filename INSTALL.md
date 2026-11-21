@@ -103,26 +103,46 @@ the user asks for the guard.
    current documentation describes no pre-tool hook and no permission
    rules, tell the user that the guard is not available for it, and stop.
 2. For a tool with a hook, pick the plain command name that starts
-   Python 3, so that the hook keeps working when Python is upgraded or
-   reinstalled. Try `python3`, then `python`, and on Windows also `py`. A
-   name qualifies when the following command prints `3`:
-   `<name> -c "import sys; print(sys.version_info[0])"`. The hook then
-   starts whatever that name finds on `PATH`. `command -v <name>` (on
+   Python 3.6 or later, so that the hook keeps working when Python is
+   upgraded or reinstalled. Try `python3`, then `python`, and on Windows
+   also `py`. A name qualifies when the following command prints `True`:
+   `<name> -c "import sys; print(sys.version_info >= (3, 6))"`. The hook
+   then starts whatever that name finds on `PATH`. `command -v <name>` (on
    Windows `where <name>`) shows the file that the name finds, and
    `<name> -c "import sys; print(sys.executable)"` shows the interpreter
-   that it starts. If the file is a shim of a version manager (pyenv,
-   asdf, mise) or lies in a project virtual environment, use the absolute
-   path of the system's unversioned interpreter instead (for example
-   `/usr/bin/python3`): a shim can fail in a directory that pins another
-   version. On Windows, run `icacls` on the interpreter's directory, and
-   prefer a name whose interpreter directory grants no write or modify
-   access to `Everyone`, `Users` or `Authenticated Users`: through such a
-   directory any program of any account can replace the interpreter and
-   turn the guard off. A directory created directly under `C:\`, such as
-   `C:\Python314`, inherits such access from the drive root. If every name
-   leads to such a directory, tell the user. If no name starts Python 3,
-   tell the user that the guard needs Python 3, and stop. Claude Code also
-   needs version 2.1.295 or later for `onFailure`.
+   that it starts. Systems differ in these names:
+   - Debian and Ubuntu have `python` only with the `python-is-python3`
+     package.
+   - RHEL 8 and its rebuilds may have no `python3` command. Use
+     `/usr/libexec/platform-python` there.
+   - On macOS, `/usr/bin/python3` is a stub until the Command Line Tools
+     are installed, and running the stub opens an installation dialog. Run
+     `xcode-select -p` first, and skip that file if the command fails.
+   - On Windows, `python` and `python3` in `WindowsApps` can be Microsoft
+     Store stubs that exit with code 9009. The test command above rules
+     them out.
+
+   If the file is a shim of a version manager (pyenv, asdf, mise) or lies
+   in a project virtual environment, use the absolute path of the system's
+   unversioned interpreter instead (for example `/usr/bin/python3`): a shim
+   can fail in a directory that pins another version. On Windows, run
+   `icacls` on the interpreter's directory, and prefer a name whose
+   interpreter directory grants no write or modify access to `Everyone`,
+   `Users` or `Authenticated Users`: through such a directory any program
+   of any account can replace the interpreter and turn the guard off. A
+   directory created directly under `C:\`, such as `C:\Python314`, inherits
+   such access from the drive root. If every name leads to such a
+   directory, tell the user that an administrator can remove that access:
+   `icacls <directory> /inheritance:d` turns the inherited entries into
+   explicit ones, and `icacls <directory> /remove:g *S-1-5-11` then removes
+   the entry of `Authenticated Users`, from which a directory under `C:\`
+   gets it. The files below the directory follow. Check the result with
+   `icacls`. If your tool runs hook commands through `cmd.exe`, use the
+   interpreter's absolute path: `cmd.exe` looks for a plain name in the
+   current directory before `PATH`, so in a repository that holds a
+   `python.exe`, that file would run in place of Python. If no name starts
+   Python 3.6 or later, tell the user that the guard needs it, and stop.
+   Claude Code also needs version 2.1.295 or later for `onFailure`.
 3. For a tool with a hook, copy `guards/guard.py` byte for byte to the
    guard location in the table. If your tool or its sandbox refuses that
    write, stop before step 4: a hook that points to a missing script
@@ -152,8 +172,10 @@ the user asks for the guard.
    outside the tool, and wait until the user has run it. The script
    supports Linux and macOS. It backs up the system file, keeps its
    settings and policies, appends the missing policies, and validates the
-   result. On Windows, OpenCode reads the system file from
-   `%ProgramData%\opencode`, and the script does not set it up there.
+   result. It needs Python 3.6 or later and looks for it as `python3`,
+   `/usr/libexec/platform-python` and `python`, in this order. On Windows,
+   OpenCode reads the system file from `%ProgramData%\opencode`, and the
+   script does not set it up there.
 6. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
