@@ -62,8 +62,10 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
 거부하게 만듭니다. 이 장치는 각 도구가 문서로 밝힌 hook이나 권한 규칙을 씁니다. Claude Code,
 Codex, Antigravity CLI(agy), Gemini CLI는 hook을, OpenCode는 권한 규칙과 정책을 씁니다. hook에는
 Python 3.6 이상이 필요합니다. 설치 방법은 `INSTALL.md`에 있고, `python3 guards/test_guard.py`로
-확인합니다. 관리자나 root 권한이 있으면 강제 장치를 Claude Code의 managed settings에도 넣을 수 있고,
-`guards/opencode-system-policy.sh`로 OpenCode 정책을 시스템 설정에 복사할 수 있습니다.
+확인합니다. 어떤 설정은 사용자만 터미널에서 적용할 수 있습니다. 관리자나 root 권한이 있으면 강제
+장치를 Claude Code의 managed settings에도 넣을 수 있고, `guards/opencode-system-policy.sh`로
+OpenCode 정책을 시스템 설정에 복사할 수 있습니다. `guards/agy-permissions.sh`는 Antigravity CLI의
+승인 확인 창을 끄고 검사를 강제 장치에 맡깁니다.
 
 ## 유지 관리
 

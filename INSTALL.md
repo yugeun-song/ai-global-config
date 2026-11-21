@@ -168,51 +168,65 @@ the user asks for the guard.
    values, and if your tool runs hook commands through PowerShell, put `&`
    and a space before the quoted command. Then merge the fragment into the
    configuration file. Add the fragment's entries next to the existing
-   ones. NEVER remove or change an existing entry. If the file already
-   holds other content, show the user the exact addition and wait for
-   approval. Keep the original content, and restore it if the merged file
-   does not parse as JSON (JSONC for OpenCode).
-5. An agent that runs as the user can still edit the user's own files.
-   For Claude Code and OpenCode, offer to put the guard where only an
-   administrator or root can change it:
-   - Claude Code reads managed settings from
+   ones. NEVER remove or change an existing entry. Keep the original
+   content, restore it if the merged file does not parse as JSON (JSONC for
+   OpenCode), and show the exact addition in your report.
+5. Some settings only the user can apply, from a terminal outside the
+   tool: system files that need administrator or root rights, and a
+   settings file that the tool keeps its agents from editing. Offer the
+   entry for your tool, give the user the command, and go on with the other
+   steps. Step 6 checks each setting after the user has applied it.
+   - Claude Code, managed settings. An agent that runs as the user can
+     still edit the user's own files, but only an administrator or root can
+     change managed settings, and their hooks stay on when any other
+     settings file sets `disableAllHooks`. Claude Code reads them from
      `C:\Program Files\ClaudeCode\managed-settings.json` on Windows,
      `/Library/Application Support/ClaudeCode/managed-settings.json` on
-     macOS and `/etc/claude-code/managed-settings.json` on Linux. Its hooks
-     stay on when any other settings file sets `disableAllHooks`. Copy the
+     macOS and `/etc/claude-code/managed-settings.json` on Linux. Copy the
      guard to `hooks/ai-global-config-guard.py` in that directory, replace
      the guard path in the fragment with the path of that copy, and merge
-     the fragment into `managed-settings.json` as in step 4. Writing there
-     needs administrator or root rights: give the user the commands for a
-     terminal outside the tool, or start them through the system's own
-     elevation prompt after the user approves. Before you write the
-     managed file, run the exact hook command with
+     the fragment into `managed-settings.json` as in step 4. The user runs
+     these commands in an administrator or root terminal, or approves the
+     system's own elevation prompt for them. Before you write the managed
+     file, run the exact hook command with
      `{"tool_name":"Bash","tool_input":{"command":"ls"}}` on standard input,
      and confirm that it exits with 0: a managed entry that fails blocks
      every tool call until an administrator fixes it. Then remove the
      user's entry and its guard copy, so that the guard runs once per tool
-     call. A plain command name is looked up in the `PATH` that Claude Code
-     inherits, and the user's own account can change that `PATH`. An
-     absolute path to an interpreter in a directory that only
-     administrators can change closes that gap, but the hook breaks when
-     that interpreter moves. Tell the user both, and let the user choose.
-     If remote settings or an MDM policy (a macOS configuration profile,
-     or a value in the Windows `HKLM` registry) already set managed
-     settings, Claude Code may skip this file. On WSL, the user can write
-     `/etc/claude-code` too.
-   - For OpenCode, the fragment also holds policies. Once merged, they
-     already apply, and no project file can lift them, because OpenCode
-     evaluates policies from broader files last. To keep them where an
-     agent cannot change them, offer to copy them into the system file,
-     which only root can change. Give the user
-     `sudo bash guards/opencode-system-policy.sh` to run in a terminal
-     outside the tool, and wait until the user has run it. The script
-     supports Linux and macOS. It backs up the system file, keeps its
-     settings and policies, appends the missing policies, and validates
-     the result. It needs Python 3.6 or later and looks for it as
-     `python3`, `/usr/libexec/platform-python` and `python`, in this
-     order. On Windows, OpenCode reads the system file from
-     `%ProgramData%\opencode`, and the script does not set it up there.
+     call. Keep the plain command name from step 2 unless the user asks for
+     an absolute path, and tell the user the trade-off: Claude Code looks
+     the name up in the `PATH` that it inherits, which the user's own
+     account can change, while an absolute path to an interpreter in a
+     directory that only administrators can change closes that gap but
+     breaks when that interpreter moves. If remote settings or an MDM
+     policy (a macOS configuration profile, or a value in the Windows
+     `HKLM` registry) already set managed settings, Claude Code may skip
+     this file. On WSL, the user can write `/etc/claude-code` too.
+   - OpenCode, system file. The fragment also holds policies. Once merged,
+     they already apply, and no project file can lift them, because
+     OpenCode evaluates policies from broader files last. To keep them where
+     an agent cannot change them, the user copies them into the system
+     file, which only root can change, with
+     `sudo bash guards/opencode-system-policy.sh`. The script supports Linux
+     and macOS. It backs up the system file, keeps its settings and
+     policies, appends the missing policies, and validates the result. It
+     needs Python 3.6 or later and looks for it as `python3`,
+     `/usr/libexec/platform-python` and `python`, in this order. On
+     Windows, OpenCode reads the system file from `%ProgramData%\opencode`,
+     and the script does not set it up there.
+   - Antigravity CLI, permissions. agy keeps its agents from reading or
+     editing `~/.gemini/antigravity-cli/settings.json`. In its auto mode,
+     agy still asks before reads outside the workspace and before commands
+     that run outside its sandbox, which git commands must do because the
+     sandbox mounts `.git` read-only. `bash guards/agy-permissions.sh` backs
+     up that file, keeps its keys and rules, turns on auto mode and access
+     outside the workspace, and allows every command, unsandboxed command,
+     file read and file write, so that the guard is the only check left on
+     those calls. It also denies `command(rm -rf /)`. The options
+     `--no-write-all`, `--no-read-all`, `--dir DIR` and `--unsandboxed CMD`
+     narrow what it allows. The script needs bash and Python 3.6 or later,
+     and it finds Python as the OpenCode script does. On Windows, the user
+     runs it from Git Bash.
 6. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
@@ -313,11 +327,7 @@ security boundary:
   `"allow"` hands the call to the next hook or the default policy, but the
   documentation bundled with version 1.5.13 says that `"allow"` approves
   the call. Under the second reading, the guard would skip the approval
-  prompts of agy. Antigravity CLI blocks agents from reading or editing
-  `~/.gemini/antigravity-cli/settings.json` directly; to reduce repeated
-  prompts on routine commands and non-workspace reads and writes while
-  keeping the `PreToolUse` credential guard active, the user can run
-  `bash guards/agy-permissions.sh` in a terminal outside the tool.
+  prompts of agy.
 - Gemini CLI: `BeforeTool` hooks use millisecond `timeout` values (the
   fragment sets `10000` for 10 seconds), regex `matcher` (`".*"`), and
   support `"allow"` and `"deny"` decisions (no `"ask"` decision), so the

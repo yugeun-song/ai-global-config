@@ -108,7 +108,7 @@ if [[ -f "$DST" ]]; then
   echo "Backup: $BACKUP"
 fi
 
-"$PY" - "$DST" "$WRITE_ALL" "$NO_READ_ALL" "$NO_UNSANDBOXED_ALL" "${#DIRS[@]}" "${DIRS[@]}" "${UNSANDBOXED_CMDS[@]}" <<'PY'
+"$PY" - "$DST" "$WRITE_ALL" "$NO_READ_ALL" "$NO_UNSANDBOXED_ALL" "${#DIRS[@]}" ${DIRS[@]+"${DIRS[@]}"} ${UNSANDBOXED_CMDS[@]+"${UNSANDBOXED_CMDS[@]}"} <<'PY'
 import json
 import os
 import stat

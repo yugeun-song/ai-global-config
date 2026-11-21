@@ -139,40 +139,51 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
    필요 없고 Windows에서 Git Bash가 있든 없든 똑같이 동작합니다. 다른 설정 조각에서는 두 값을
    감싼 따옴표를 그대로 두고, 도구가 hook 명령을 PowerShell로 실행하면 따옴표로 감싼 명령 앞에
    `&`와 공백 하나를 붙입니다. 그다음 조각을 설정 파일에 합칩니다. 조각의 항목을 기존 항목 옆에
-   추가합니다. 기존 항목은 절대 지우거나 바꾸지 않습니다. 파일에 이미 다른 내용이 있으면, 추가할
-   내용을 정확히 보여 주고 승인을 기다립니다. 원래 내용을 보관해 두고, 합친 파일이
-   JSON(OpenCode는 JSONC)으로 해석되지 않으면 원래 내용으로 되돌립니다.
-5. 사용자 권한으로 도는 에이전트는 여전히 사용자 자신의 파일을 고칠 수 있습니다. Claude Code와
-   OpenCode에서는 관리자나 root만 바꿀 수 있는 곳에 강제 장치를 두자고 제안합니다.
-   - Claude Code는 managed settings를 Windows에서는
-     `C:\Program Files\ClaudeCode\managed-settings.json`, macOS에서는
+   추가합니다. 기존 항목은 절대 지우거나 바꾸지 않습니다. 원래 내용을 보관해 두고, 합친 파일이
+   JSON(OpenCode는 JSONC)으로 해석되지 않으면 원래 내용으로 되돌리고, 추가한 내용을 그대로 보고에
+   적습니다.
+5. 어떤 설정은 사용자만 도구 밖 터미널에서 적용할 수 있습니다. 관리자나 root 권한이 필요한
+   시스템 파일과, 도구가 에이전트의 수정을 막는 설정 파일이 그렇습니다. 자기 도구에 해당하는
+   항목을 제안하고 사용자에게 명령을 준 뒤, 다른 단계를 이어 갑니다. 사용자가 적용한 설정은
+   6단계에서 확인합니다.
+   - Claude Code, managed settings. 사용자 권한으로 도는 에이전트는 여전히 사용자 자신의 파일을
+     고칠 수 있지만, managed settings는 관리자나 root만 바꿀 수 있고, 다른 설정 파일에
+     `disableAllHooks`가 들어 있어도 그 hook은 켜져 있습니다. Claude Code는 managed settings를
+     Windows에서는 `C:\Program Files\ClaudeCode\managed-settings.json`, macOS에서는
      `/Library/Application Support/ClaudeCode/managed-settings.json`, Linux에서는
-     `/etc/claude-code/managed-settings.json`에서 읽습니다. 다른 설정 파일에 `disableAllHooks`가
-     들어 있어도 managed settings의 hook은 켜져 있습니다. 판정기를 그 디렉터리의
+     `/etc/claude-code/managed-settings.json`에서 읽습니다. 판정기를 그 디렉터리의
      `hooks/ai-global-config-guard.py`로 복사하고, 설정 조각의 판정기 경로를 그 사본의 경로로
-     바꾼 뒤, 4단계처럼 조각을 `managed-settings.json`에 합칩니다. 그곳에 쓰려면 관리자나 root
-     권한이 필요합니다. 도구 밖 터미널에서 실행할 명령을 사용자에게 주거나, 사용자가 승인한 뒤
-     시스템 자체의 권한 상승 확인 창을 거쳐 실행합니다. managed 파일을 쓰기 전에, 표준 입력으로
-     `{"tool_name":"Bash","tool_input":{"command":"ls"}}`를 넣어 hook 명령을 그대로 실행하고,
-     종료 코드가 0인지 확인합니다. managed 항목이 실패하면, 관리자가 고칠 때까지 모든 도구
-     호출이 막히기 때문입니다. 그다음 사용자 설정의 항목과 그 판정기 사본을 지워, 도구 호출마다
-     강제 장치가 한 번만 돌게 합니다. 일반 명령 이름은 Claude Code가 물려받는 `PATH`에서 찾는데,
-     사용자 자신의 계정이 그 `PATH`를 바꿀 수 있습니다. 관리자만 바꿀 수 있는 디렉터리에 있는
-     인터프리터의 절대 경로를 쓰면 이 빈틈이 닫히지만, 그 인터프리터가 옮겨지면 hook이 깨집니다.
-     두 가지를 모두 사용자에게 알리고, 사용자가 고르게 합니다. 원격 설정이나 MDM 정책(macOS 구성
-     프로필, 또는 Windows `HKLM` 레지스트리의 값)으로 managed settings가 이미 정해져 있으면,
-     Claude Code가 이 파일을 건너뛸 수 있습니다. WSL에서는 사용자도 `/etc/claude-code`에 쓸 수
-     있습니다.
-   - OpenCode의 설정 조각에는 정책(policies)도 들어 있습니다. 조각을 합치면 정책이 바로
-     적용되고, 어떤 프로젝트 파일도 그 정책을 풀 수 없습니다. OpenCode는 넓은 범위의 파일에 든
-     정책을 나중에 평가하기 때문입니다. 에이전트가 정책을 바꿀 수 없게 하려면, root만 바꿀 수
-     있는 시스템 파일에도 정책을 복사하자고 제안합니다. 도구 밖 터미널에서 실행할
-     `sudo bash guards/opencode-system-policy.sh`를 사용자에게 주고, 사용자가 실행할 때까지
-     기다립니다. 이 스크립트는 Linux와 macOS를 지원합니다. 스크립트는 시스템 파일을 백업하고, 그
-     설정과 정책을 유지하면서 빠진 정책을 덧붙이고, 결과를 검증합니다. 이 스크립트에는 Python
-     3.6 이상이 필요하고, 스크립트는 `python3`, `/usr/libexec/platform-python`, `python` 순서로
-     그 인터프리터를 찾습니다. Windows에서 OpenCode는 `%ProgramData%\opencode`에서 시스템
+     바꾼 뒤, 4단계처럼 조각을 `managed-settings.json`에 합칩니다. 사용자는 이 명령을 관리자나
+     root 터미널에서 실행하거나, 시스템 자체의 권한 상승 확인 창에서 승인합니다. managed 파일을
+     쓰기 전에, 표준 입력으로 `{"tool_name":"Bash","tool_input":{"command":"ls"}}`를 넣어 hook
+     명령을 그대로 실행하고, 종료 코드가 0인지 확인합니다. managed 항목이 실패하면, 관리자가 고칠
+     때까지 모든 도구 호출이 막히기 때문입니다. 그다음 사용자 설정의 항목과 그 판정기 사본을 지워,
+     도구 호출마다 강제 장치가 한 번만 돌게 합니다. 사용자가 절대 경로를 요청하지 않으면 2단계의
+     일반 명령 이름을 그대로 쓰고, 그 장단점을 사용자에게 알립니다. Claude Code는 그 이름을
+     자기가 물려받은 `PATH`에서 찾는데, 사용자 자신의 계정이 그 `PATH`를 바꿀 수 있습니다. 반면
+     관리자만 바꿀 수 있는 디렉터리에 있는 인터프리터의 절대 경로를 쓰면 이 빈틈이 닫히지만, 그
+     인터프리터가 옮겨지면 hook이 깨집니다. 원격 설정이나 MDM 정책(macOS 구성 프로필, 또는
+     Windows `HKLM` 레지스트리의 값)으로 managed settings가 이미 정해져 있으면, Claude Code가 이
+     파일을 건너뛸 수 있습니다. WSL에서는 사용자도 `/etc/claude-code`에 쓸 수 있습니다.
+   - OpenCode, 시스템 파일. OpenCode의 설정 조각에는 정책(policies)도 들어 있습니다. 조각을
+     합치면 정책이 바로 적용되고, 어떤 프로젝트 파일도 그 정책을 풀 수 없습니다. OpenCode는 넓은
+     범위의 파일에 든 정책을 나중에 평가하기 때문입니다. 에이전트가 정책을 바꿀 수 없게 하려면,
+     사용자가 `sudo bash guards/opencode-system-policy.sh`로 root만 바꿀 수 있는 시스템 파일에
+     정책을 복사합니다. 이 스크립트는 Linux와 macOS를 지원합니다. 스크립트는 시스템 파일을
+     백업하고, 그 설정과 정책을 유지하면서 빠진 정책을 덧붙이고, 결과를 검증합니다. 이 스크립트에는
+     Python 3.6 이상이 필요하고, 스크립트는 `python3`, `/usr/libexec/platform-python`, `python`
+     순서로 그 인터프리터를 찾습니다. Windows에서 OpenCode는 `%ProgramData%\opencode`에서 시스템
      파일을 읽지만, 이 스크립트는 그곳을 설정하지 않습니다.
+   - Antigravity CLI, 권한. agy는 에이전트가 `~/.gemini/antigravity-cli/settings.json`을 읽거나
+     고치지 못하게 막습니다. agy는 auto 모드에서도 워크스페이스 밖을 읽기 전과, sandbox 밖에서 도는
+     명령 앞에서 묻습니다. sandbox가 `.git`을 읽기 전용으로 붙이므로 git 명령은 sandbox 밖에서
+     돌아야 합니다. `bash guards/agy-permissions.sh`는 그 파일을 백업하고, 기존 키와 규칙을
+     유지하면서 auto 모드와 워크스페이스 밖 접근을 켜고, 모든 명령, sandbox 밖 명령, 파일 읽기,
+     파일 쓰기를 허용합니다. 그러면 이런 호출에는 강제 장치만 검사로 남습니다. 이 스크립트는
+     `command(rm -rf /)`도 거부합니다. `--no-write-all`, `--no-read-all`, `--dir DIR`,
+     `--unsandboxed CMD` 옵션으로 허용 범위를 줄일 수 있습니다. 이 스크립트에는 bash와 Python 3.6
+     이상이 필요하고, OpenCode 스크립트와 같은 방식으로 Python을 찾습니다. Windows에서는 사용자가
+     Git Bash에서 실행합니다.
 6. 강제 장치를 확인합니다.
    - `python3 guards/test_guard.py <설치한 판정기>`가 실패 없이 끝납니다.
    - 설치한 판정기의 SHA-256이 `guards/guard.py`의 SHA-256과 같습니다.
@@ -251,11 +262,7 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
 - Antigravity CLI는 hook이 실패할 때의 동작을 문서에 밝히지 않습니다. 그래서 실패하면 호출이
   실행된다고 보고 대합니다. 온라인 문서는 `"allow"`가 호출을 다음 hook이나 기본 정책에
   넘긴다고 적지만, 1.5.13 버전에 들어 있는 문서는 `"allow"`가 호출을 승인한다고 적습니다. 두
-  번째 해석이 맞다면, 강제 장치 때문에 agy의 승인 확인이 생략됩니다. Antigravity CLI는
-  에이전트가 `~/.gemini/antigravity-cli/settings.json`을 직접 읽거나 고치지 못하게 막으므로,
-  `PreToolUse` credential 가드를 유지하면서 일상 명령과 워크스페이스 바깥
-  읽기·쓰기의 반복 확인 창을 줄이려면 사용자가 도구 밖 터미널에서
-  `bash guards/agy-permissions.sh`를 실행하면 됩니다.
+  번째 해석이 맞다면, 강제 장치 때문에 agy의 승인 확인이 생략됩니다.
 - Gemini CLI: `BeforeTool` hook은 밀리초 단위 `timeout`(설정 조각은 10초에
   해당하는 `10000`을 씀)과 정규식 `matcher`(`".*"`)를 쓰며, `"allow"`와
   `"deny"` 결정만 지원합니다(`"ask"` 결정이 없음). 그래서 강제 장치는 자기
