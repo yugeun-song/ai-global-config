@@ -89,7 +89,8 @@ READ_ONLY_TOOLS = {
     "list_directory", "find_by_name", "grep_search", "search_file_content",
     "websearch", "webfetch", "search_web", "google_web_search", "web_fetch",
     "read_url_content", "todowrite", "agent", "task", "ask_user",
-    "invoke_subagent", "ask_question",
+    "invoke_subagent", "ask_question", "send_message", "manage_subagents",
+    "define_subagent", "list_permissions",
 }
 SEARCH_GLOB_KEYS = {
     "grep": ("glob",),
@@ -119,10 +120,11 @@ PURE_CD = re.compile(
 STDERR_SAFE = re.compile(r"(?:^|\s)2>(?:&1|/dev/null)(?=\s|$)")
 READ_ONLY_CMDS = {
     "cat", "less", "more", "head", "tail", "grep", "egrep", "fgrep", "rg", "jq",
-    "ls", "stat", "test", "[", "wc", "file", "diff", "cmp", "sha256sum", "shasum",
-    "md5sum", "cksum", "readlink", "realpath", "which", "true", "false",
-    "get-content", "get-filehash", "get-item", "get-childitem", "test-path", "type", "dir",
-    "echo", "printf", "write-output",
+    "ls", "stat", "test", "[", "wc", "file", "diff", "cmp", "comm", "sha1sum", "sha256sum",
+    "sha512sum", "b2sum", "shasum", "md5sum", "md5", "cksum", "readlink", "realpath",
+    "which", "true", "false", "pwd", "basename", "dirname", "uname", "whoami", "id", "date",
+    "get-content", "get-filehash", "get-item", "get-childitem", "get-location", "test-path",
+    "type", "dir", "echo", "printf", "write-output",
 }
 READ_ONLY_PIPE_SINKS = {
     "jq", "head", "tail", "grep", "egrep", "fgrep", "rg", "wc", "sort", "uniq",
@@ -134,10 +136,8 @@ GIT_GLOBAL_VALUE_FLAGS = {"-c", "--git-dir", "--work-tree", "--namespace", "--co
 GIT_MESSAGE_SUBS = {"commit", "tag", "merge", "notes"}
 GIT_SHORT_M = re.compile(r"^-[asevqnoSu]*m$")
 HEREDOC_OPEN = re.compile(r"<<(-?)([\"'])([A-Za-z0-9_]+)\2")
-CAT_MESSAGE = re.compile(
-    r"(?:^|\s)(?:-[asevqnoSu]*m|--message|--title|--body|--notes|--subject|--body-file)"
-    r"(?:\s+|=)\"\$\(\s*cat\s*$"
-)
+GIT_CAT_MESSAGE = re.compile(r"(?:^|\s)(?:-[asevqnoSu]*m|--message)(?:\s+|=)\"\$\(\s*cat\s*$")
+GH_CAT_MESSAGE = re.compile(r"(?:^|\s)(?:-[tbn]|--title|--body|--notes|--subject)(?:\s+|=)\"\$\(\s*cat\s*$")
 CAT_MESSAGE_CLOSE = re.compile(r"\s*\)\"")
 MESSAGE_SOURCES = {"echo", "printf", "write-output"}
 GH_TEXT_SUBS = {"pr", "issue", "release"}
@@ -145,6 +145,7 @@ GH_TEXT_ACTIONS = {"create", "edit", "comment", "review", "merge"}
 GH_TEXT_FLAGS = {"--title", "-t", "--body", "-b", "--notes", "-n", "--subject"}
 PYTHON_CMD = re.compile(r"^(?:python(?:\d+(?:\.\d*)?)?|py)(?:\.exe)?$", re.IGNORECASE)
 PYTHON_SAFE_FLAGS = {"-I", "-S", "-B", "-u", "-E", "-s"}
+JSON_TOOL_FLAGS = {"--sort-keys", "--no-ensure-ascii", "--json-lines", "--tab", "--no-indent", "--compact", "--strict"}
 SEP = r"[\\/]" if os.name == "nt" else "/"
 ROOT = re.compile(SEP + "*")
 PART = re.compile(SEP)
@@ -543,11 +544,10 @@ def git_subcommand_index(toks):
     return None
 
 
-def reads_stdin_message(words):
-    return any(
-        w == "--file=-" or (w in ("-F", "--file", "--body-file") and k + 1 < len(words) and words[k + 1] == "-")
-        for k, w in enumerate(words)
-    )
+def reads_stdin_message(words, is_gh=False):
+    eq = ("--body-file=-", "--notes-file=-") if is_gh else ("--file=-",)
+    flags = ("-F", "--body-file", "--notes-file") if is_gh else ("-F", "--file")
+    return any(w in eq or (w in flags and k + 1 < len(words) and words[k + 1] == "-") for k, w in enumerate(words))
 
 
 def strip_git_heredocs(command):
@@ -571,10 +571,11 @@ def strip_git_heredocs(command):
             found = message_options(toks)
             literal = in_cat = False
             if found is not None:
-                k, _, _ = found
-                if CAT_MESSAGE.search(tail) and not line[match.end():].strip():
+                k, _, _, is_gh = found
+                cat_re = GH_CAT_MESSAGE if is_gh else GIT_CAT_MESSAGE
+                if cat_re.search(tail) and not line[match.end():].strip():
                     literal = in_cat = True
-                elif reads_stdin_message([t[2] for t in toks[k:]]):
+                elif reads_stdin_message([t[2] for t in toks[k:]], is_gh=is_gh):
                     literal = True
             if literal:
                 j = i + 1
@@ -616,9 +617,9 @@ def safe_message_source(text):
 def message_options(toks):
     sub_idx = git_subcommand_index(toks)
     if sub_idx is not None and toks[sub_idx][2] in GIT_MESSAGE_SUBS:
-        return sub_idx + 1, lambda w: w in ("-m", "--message") or bool(GIT_SHORT_M.match(w)), ("--message=",)
+        return sub_idx + 1, lambda w: w in ("-m", "--message") or bool(GIT_SHORT_M.match(w)), ("--message=",), False
     if len(toks) > 2 and toks[0][2].lower() in ("gh", "gh.exe") and toks[1][2] in GH_TEXT_SUBS and toks[2][2] in GH_TEXT_ACTIONS:
-        return 3, lambda w: w in GH_TEXT_FLAGS, tuple(f + "=" for f in sorted(GH_TEXT_FLAGS) if f.startswith("--"))
+        return 3, lambda w: w in GH_TEXT_FLAGS, tuple(f + "=" for f in sorted(GH_TEXT_FLAGS) if f.startswith("--")), True
     return None
 
 
@@ -626,14 +627,16 @@ def strip_segment_message(seg):
     stages = split_pipes(seg)
     if len(stages) == 2 and safe_message_source(stages[0]):
         toks = scan_simple_tokens(stages[1])
-        sub_idx = git_subcommand_index(toks)
-        if sub_idx is not None and toks[sub_idx][2] in GIT_MESSAGE_SUBS and reads_stdin_message([t[2] for t in toks[sub_idx + 1:]]):
-            return "_ |" + stages[1]
+        found_pipe = message_options(toks)
+        if found_pipe is not None:
+            pk, _, _, is_gh = found_pipe
+            if reads_stdin_message([t[2] for t in toks[pk:]], is_gh=is_gh):
+                return "_ |" + stages[1]
     toks = scan_simple_tokens(seg)
     found = message_options(toks)
     if found is None:
         return seg
-    k, takes_text, prefixes = found
+    k, takes_text, prefixes, _ = found
     replacements = []
     while k < len(toks):
         start, end, word = toks[k]
@@ -746,6 +749,25 @@ def has_unquoted_construct(text, targets):
     return False
 
 
+def is_read_only_python_json_tool(toks, start, max_positional):
+    j = start
+    positional = 0
+    while j < len(toks):
+        arg = toks[j]
+        if arg in JSON_TOOL_FLAGS:
+            j += 1
+        elif arg == "--indent" and j + 1 < len(toks) and toks[j + 1].isdigit():
+            j += 2
+        elif arg.startswith("--indent=") and arg[9:].isdigit():
+            j += 1
+        elif arg.startswith("-"):
+            return False
+        else:
+            positional += 1
+            j += 1
+    return positional <= max_positional
+
+
 def is_read_only_stage(stage, is_pipe_sink):
     cleaned = STDERR_SAFE.sub(" ", stage).strip()
     if not cleaned:
@@ -759,10 +781,18 @@ def is_read_only_stage(stage, is_pipe_sink):
     if not toks:
         return False
     cmd = os.path.basename(toks[0]).lower()
-    if not is_pipe_sink and len(toks) == 2 and toks[1].lower() in ("--version", "version", "--help"):
-        return True
     if is_pipe_sink:
-        if cmd not in READ_ONLY_PIPE_SINKS:
+        if cmd in READ_ONLY_PIPE_SINKS:
+            pass
+        elif PYTHON_CMD.match(cmd):
+            i = 1
+            while i < len(toks) and toks[i] in PYTHON_SAFE_FLAGS:
+                i += 1
+            if not (i + 1 < len(toks) and toks[i] == "-m" and toks[i + 1] == "json.tool"):
+                return False
+            if not is_read_only_python_json_tool(toks, i + 2, 0):
+                return False
+        else:
             return False
     else:
         if cmd in READ_ONLY_CMDS:
@@ -785,20 +815,14 @@ def is_read_only_stage(stage, is_pipe_sink):
                 return False
         elif PYTHON_CMD.match(cmd):
             i = 1
-            module = None
-            while i < len(toks):
-                if toks[i] in PYTHON_SAFE_FLAGS:
-                    i += 1
-                elif toks[i] == "-m" and i + 1 < len(toks):
-                    module = toks[i + 1]
-                    i += 2
-                else:
-                    break
-            if module == "json.tool":
-                return i + 1 == len(toks)
-            if i >= len(toks) or toks[i].startswith("-"):
-                return False
-            if os.path.basename(toks[i]).lower() != "test_guard.py":
+            while i < len(toks) and toks[i] in PYTHON_SAFE_FLAGS:
+                i += 1
+            if i < len(toks) and toks[i] == "-m":
+                if i + 1 >= len(toks) or toks[i + 1] != "json.tool":
+                    return False
+                if not is_read_only_python_json_tool(toks, i + 2, 1):
+                    return False
+            elif i >= len(toks) or toks[i].startswith("-") or os.path.basename(toks[i]).lower() != "test_guard.py":
                 return False
         else:
             return False
@@ -812,22 +836,13 @@ def is_read_only_stage(stage, is_pipe_sink):
     return True
 
 
-def is_read_only_command(command):
-    if not command or len(command) > MAX_PARSED_CHARS:
+def is_read_only_segment(seg):
+    if not seg or len(seg) > MAX_PARSED_CHARS:
         return False
-    if has_unquoted_construct(command, ("$(", "`", "<(", ">(")):
+    if has_unquoted_construct(seg, ("$(", "`", "<(", ">(")):
         return False
-    segments = split_segments(command)
-    has_any = False
-    for _, seg in segments:
-        if not seg.strip() or PURE_CD.match(seg.strip()):
-            continue
-        has_any = True
-        stages = split_pipes(seg)
-        for idx, stage in enumerate(stages):
-            if not is_read_only_stage(stage, idx > 0):
-                return False
-    return has_any
+    stages = split_pipes(seg)
+    return bool(stages) and all(is_read_only_stage(stage, idx > 0) for idx, stage in enumerate(stages))
 
 
 def tokens(command):
@@ -882,7 +897,7 @@ def chain_cd_targets(cd_targets, bases):
     return with_real(list(dict.fromkeys(resolved))[:MAX_BASES])
 
 
-def check_command(command, bases):
+def check_command(command, bases, persistent=False):
     if not command:
         return "allow"
     command = strip_messages(DIRENV.sub("direnv", command))
@@ -914,6 +929,8 @@ def check_command(command, bases):
     if names_secret(forms) and not EXISTENCE_ONLY.match(command):
         if not IGNORE_APPEND.match(command) and not ENV_FROM_EXAMPLE.match(command):
             return "deny"
+    any_protected = names_protected(forms) or any(b and names_protected(text_forms(b)) for b in base_list)
+    protected_ask = False
     seg_bases = list(base_list)
     for sep, seg in split_segments(command):
         stripped = seg.strip()
@@ -923,6 +940,8 @@ def check_command(command, bases):
         is_pure_cd = bool(PURE_CD.match(stripped))
         if is_pure_cd and seg_cd_raw:
             next_bases = resolve_cd_targets(seg_cd_raw, seg_bases)
+            if persistent and (names_protected(text_forms(stripped)) or any(b and names_protected(text_forms(b)) for b in next_bases)):
+                protected_ask = True
             if sep == "||":
                 seg_bases = list(dict.fromkeys(seg_bases + next_bases))[:MAX_BASES]
             else:
@@ -936,8 +955,9 @@ def check_command(command, bases):
                 seg_bases = cur_bases
         need_sweep = bool(SWEEPING.search(stripped))
         need_home = bool(HOME_SWEEPING.search(stripped))
+        seg_words = None
         if need_sweep or need_home:
-            _, seg_whole, seg_shell = command_words(stripped)
+            seg_words, seg_whole, seg_shell = command_words(stripped)
             sweep_bases = list(cur_bases)
             if need_sweep:
                 for w in seg_whole:
@@ -954,7 +974,15 @@ def check_command(command, bases):
                 home_words = dict.fromkeys(word.strip(";&|()") for word in seg_shell)
                 if any(word and word not in skip and covers_home(path_forms(word, cur_bases)) for word in home_words):
                     return "home"
-    if names_protected(forms) and not is_read_only_command(command):
+        if not protected_ask and not is_read_only_segment(stripped):
+            if any(b and names_protected(text_forms(b)) for b in cur_bases) or names_protected(text_forms(stripped)):
+                protected_ask = True
+            elif any_protected or seg_cd_raw or cur_bases != base_list:
+                if seg_words is None:
+                    seg_words, _, _ = command_words(stripped)
+                if any(names_protected(path_forms(w, cur_bases)) for w in seg_words):
+                    protected_ask = True
+    if protected_ask:
         return "ask"
     return "allow"
 
@@ -973,10 +1001,11 @@ def verdict(tool, args, cwd):
             bases = [lowered[key]] + bases
     bases = with_real(bases)
     result = "allow"
+    persistent = name == "write_stdin"
     if name in SHELL_TOOLS:
         for key in SHELL_KEYS:
             if key in lowered:
-                found = check_command(joined(lowered[key]), bases)
+                found = check_command(joined(lowered[key]), bases, persistent=persistent)
                 if found in ("deny", "home"):
                     return found
                 if found == "ask":

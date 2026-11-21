@@ -6,7 +6,7 @@ param(
 )
 
 $here = $PSScriptRoot
-$toolError = 'usage limit reached|expected a string starting with|rate limit exceeded|unexpected argument|not logged in|please log in|authentication failed|session id not found|failed to start'
+$toolError = 'usage limit reached|quota reached|resource_exhausted|expected a string starting with|rate limit exceeded|unexpected argument|not logged in|please log in|authentication failed|session id not found|failed to start'
 
 function Invoke-FirstTurn([string]$Prompt, [string]$Session) {
 	switch ($Tool) {
