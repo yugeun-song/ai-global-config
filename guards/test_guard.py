@@ -1,11 +1,16 @@
+import atexit
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 here = os.path.dirname(os.path.abspath(__file__))
+workdir = tempfile.mkdtemp(prefix="agc-guard-test-")
+atexit.register(shutil.rmtree, workdir, True)
 CONFIGS = {
     "claude": os.path.join("~", ".claude", "settings.json"),
     "codex": os.path.join(os.environ.get("CODEX_HOME") or os.path.join("~", ".codex"), "hooks.json"),
@@ -64,7 +69,7 @@ def check_hook(tool):
         for command in commands:
             exec_form = isinstance(command, tuple)
             for expect, event in zip(("deny", "allow"), PROBES[tool]):
-                result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, input=json.dumps(event).encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+                result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, cwd=workdir, input=json.dumps(event).encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
                 out = result.stdout.decode("utf-8", errors="replace").strip()
                 if tool in ("agy", "gemini"):
                     try:
@@ -94,7 +99,7 @@ def check_hook(tool):
 
 if len(sys.argv) == 3 and sys.argv[1] == "--hook" and sys.argv[2] in CONFIGS:
     sys.exit(check_hook(sys.argv[2]))
-guard = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "guard.py")
+guard = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(here, "guard.py")
 with open(guard, encoding="utf-8") as source:
     budget_line = re.search(r"^CHECK_SECONDS = ([0-9.]+)$", source.read(), re.M)
 time_budget = float(budget_line.group(1)) if budget_line else None
@@ -104,6 +109,7 @@ def verdict(fmt, payload):
     try:
         result = subprocess.run(
             [sys.executable, "-I", "-S", guard, fmt],
+            cwd=workdir,
             input=payload.encode("utf-8"),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
