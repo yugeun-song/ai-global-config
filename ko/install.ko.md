@@ -210,9 +210,12 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
      그 파일을 백업하고, 기존 키와 규칙을 유지하면서 auto 모드와 워크스페이스 밖 접근을 켜고,
      모든 명령(`command(*)`, 개인 계정에서는 sandbox 안팎 명령을 모두 다룸), 파일 읽기, 파일
      쓰기를 허용합니다. 그러면 이런 호출에는 강제 장치만 검사로 남습니다. 이 스크립트는
-     `command(rm -rf /)`도 거부합니다. `--no-write-all`, `--no-read-all`, `--dir DIR`,
-     `--unsandboxed CMD` 옵션으로 허용 범위를 조정할 수 있습니다. 개인 계정은 `unsandboxed`
-     규칙을 무시하고 경고를 띄우므로, `--unsandboxed '*'`(또는 특정 명령)는 비즈니스·엔터프라이즈
+     `command(rm -rf /)`도 거부하며, `--unsandboxed`를 넘기지 않으면 예전 `unsandboxed(*)`를
+     지웁니다. `--no-write-all`, `--no-read-all`, `--dir DIR`, `--unsandboxed CMD`,
+     `--clean`(이미 `command(*)`가 다루는 개별 `command(...)` 허용 항목과 요청하지 않은
+     `unsandboxed(...)` 항목을 지우고 `read_file(...)`, `write_file(...)`, `deny`, `ask` 규칙은
+     남김), `--dry-run` 옵션으로 동작을 조정할 수 있습니다. 개인 계정은 `unsandboxed` 규칙을
+     무시하고 경고를 띄우므로, `--unsandboxed '*'`(또는 특정 명령)는 비즈니스·엔터프라이즈
      계정에서만 넘깁니다. `$(...)`, 역따옴표, `<(...)`, `{a,b}`처럼 접두사 일치를 끄는 shell
      구문은 정확한 일치 규칙, `regex:` 규칙, `toolPermission` 설정이 없으면 여전히 묻습니다. 이
      스크립트에는 bash와 Python 3.6 이상이 필요하고, OpenCode 스크립트와 같은 방식으로 Python을

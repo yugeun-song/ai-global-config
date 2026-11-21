@@ -4,6 +4,8 @@ set -euo pipefail
 DST=""
 WRITE_ALL=1
 NO_READ_ALL=0
+CLEAN=0
+DRY_RUN=0
 UNSANDBOXED_CMDS=()
 DIRS=()
 
@@ -25,11 +27,15 @@ PreToolUse credential guard continues blocking secrets.
   --unsandboxed CMD      Add unsandboxed(CMD) to permissions.allow (repeatable;
                          for business/enterprise accounts, e.g. --unsandboxed '*';
                          personal accounts ignore unsandboxed rules and use command(*)).
+  --clean                Remove redundant specific command(...) allow rules already
+                         covered by command(*), plus unrequested unsandboxed(...) rules.
+                         Keeps read_file(...), write_file(...), deny and ask rules.
+  --dry-run              Show rules that would be added or removed without writing.
   -h, --help             Show this help.
 
-Antigravity CLI blocks agents from editing settings.json directly, so run
-this script in your own terminal. It backs up an existing destination, keeps
-all existing keys and rules, appends missing rules, and validates JSON.
+Without --unsandboxed, legacy unsandboxed(*) is removed so personal accounts do
+not show a warning. Run this script in your own terminal. It backs up an
+existing destination, keeps all other keys and rules, and validates JSON.
 EOF
 }
 
@@ -70,6 +76,14 @@ while [[ $# -gt 0 ]]; do
       UNSANDBOXED_CMDS+=("$2")
       shift 2
       ;;
+    --clean)
+      CLEAN=1
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -100,15 +114,16 @@ if [[ -z "$PY" ]]; then
   exit 1
 fi
 
-mkdir -p "$(dirname "$DST")"
-
-if [[ -f "$DST" ]]; then
-  BACKUP="$DST.bak.$(date +%Y%m%d%H%M%S)"
-  cp -p "$DST" "$BACKUP"
-  echo "Backup: $BACKUP"
+if [[ "$DRY_RUN" -eq 0 ]]; then
+  mkdir -p "$(dirname "$DST")"
+  if [[ -f "$DST" ]]; then
+    BACKUP="$DST.bak.$(date +%Y%m%d%H%M%S)"
+    cp -p "$DST" "$BACKUP"
+    echo "Backup: $BACKUP"
+  fi
 fi
 
-"$PY" - "$DST" "$WRITE_ALL" "$NO_READ_ALL" "${#DIRS[@]}" ${DIRS[@]+"${DIRS[@]}"} ${UNSANDBOXED_CMDS[@]+"${UNSANDBOXED_CMDS[@]}"} <<'PY'
+"$PY" - "$DST" "$WRITE_ALL" "$NO_READ_ALL" "$CLEAN" "$DRY_RUN" "${#DIRS[@]}" ${DIRS[@]+"${DIRS[@]}"} ${UNSANDBOXED_CMDS[@]+"${UNSANDBOXED_CMDS[@]}"} <<'PY'
 import json
 import os
 import stat
@@ -118,9 +133,11 @@ import tempfile
 dst = sys.argv[1]
 write_all = sys.argv[2] == "1"
 no_read_all = sys.argv[3] == "1"
-num_dirs = int(sys.argv[4])
-dirs = sys.argv[5:5 + num_dirs]
-unsandboxed_cmds = sys.argv[5 + num_dirs:]
+clean = sys.argv[4] == "1"
+dry_run = sys.argv[5] == "1"
+num_dirs = int(sys.argv[6])
+dirs = sys.argv[7:7 + num_dirs]
+unsandboxed_cmds = sys.argv[7 + num_dirs:]
 
 if os.path.exists(dst):
     mode = stat.S_IMODE(os.stat(dst).st_mode)
@@ -140,15 +157,36 @@ if not isinstance(perms, dict):
     perms = {}
     data["permissions"] = perms
 
-allow = perms.get("allow")
-if not isinstance(allow, list):
-    allow = []
-    perms["allow"] = allow
+raw_allow = perms.get("allow")
+if not isinstance(raw_allow, list):
+    raw_allow = []
 
 deny = perms.get("deny")
 if not isinstance(deny, list):
     deny = []
     perms["deny"] = deny
+
+wanted_unsandboxed = {f"unsandboxed({cmd})" for cmd in unsandboxed_cmds}
+allow = []
+removed = []
+seen = set()
+for rule in raw_allow:
+    drop = False
+    if isinstance(rule, str):
+        if rule == "unsandboxed(*)" and rule not in wanted_unsandboxed:
+            drop = True
+        elif clean and rule.startswith("unsandboxed(") and rule.endswith(")") and rule not in wanted_unsandboxed:
+            drop = True
+        elif clean and rule.startswith("command(") and rule.endswith(")") and rule != "command(*)":
+            drop = True
+    if drop:
+        removed.append(rule)
+        continue
+    if rule in seen:
+        removed.append(rule)
+        continue
+    seen.add(rule)
+    allow.append(rule)
 
 to_allow = ["command(*)"]
 to_allow.extend(f"unsandboxed({cmd})" for cmd in unsandboxed_cmds)
@@ -166,13 +204,28 @@ for raw_dir in dirs:
     to_allow.append(f"read_file({norm})")
     to_allow.append(f"write_file({norm})")
 
+added = []
 for rule in to_allow:
     if rule not in allow:
         allow.append(rule)
+        added.append(rule)
+
+perms["allow"] = allow
 
 for rule in ("command(rm -rf /)",):
     if rule not in deny:
         deny.append(rule)
+
+for rule in removed:
+    print(f"Removed: {rule}")
+for rule in added:
+    print(f"Added: {rule}")
+
+if dry_run:
+    print(f"Dry run (unchanged): {dst}")
+    print(f"Allow rules would be: {len(allow)}")
+    print(f"Deny rules would be: {len(deny)}")
+    sys.exit(0)
 
 fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(dst)), prefix=".agy-settings.")
 with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -183,5 +236,7 @@ print(f"Allow rules in {dst}: {len(allow)}")
 print(f"Deny rules in {dst}: {len(deny)}")
 PY
 
-"$PY" -m json.tool "$DST" >/dev/null
-echo "Done: $DST"
+if [[ "$DRY_RUN" -eq 0 ]]; then
+  "$PY" -m json.tool "$DST" >/dev/null
+  echo "Done: $DST"
+fi

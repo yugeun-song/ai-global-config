@@ -264,9 +264,13 @@ the user asks for the guard, or when an update finds an installed guard.
      allows every command (`command(*)`, which covers both sandboxed and
      unsandboxed commands on personal accounts), file read and file write,
      so that the guard is the only check left on those calls. It also
-     denies `command(rm -rf /)`. The options `--no-write-all`,
-     `--no-read-all`, `--dir DIR` and `--unsandboxed CMD` adjust what it
-     allows; pass `--unsandboxed '*'` (or specific commands) only on
+     denies `command(rm -rf /)` and removes legacy `unsandboxed(*)` unless
+     `--unsandboxed` is passed. The options `--no-write-all`,
+     `--no-read-all`, `--dir DIR`, `--unsandboxed CMD`, `--clean` (removes
+     redundant specific `command(...)` allow entries and unrequested
+     `unsandboxed(...)` entries while keeping `read_file(...)`,
+     `write_file(...)`, `deny` and `ask` rules) and `--dry-run` adjust its
+     behavior; pass `--unsandboxed '*'` (or specific commands) only on
      business and enterprise accounts, because personal accounts ignore
      `unsandboxed` rules with a warning. Shell constructs that disable
      prefix matching (such as `$(...)`, backticks, `<(...)` and `{a,b}`)
