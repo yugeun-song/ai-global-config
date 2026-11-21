@@ -92,24 +92,33 @@ Step 4 finds the older copy, and step 6 replaces it.
 ## Install the guard (optional)
 
 The rules are text. The guard makes a tool refuse a tool call that names a
-credential (Rule SECRET-1), and ask the user before a call changes the
-guard or the hook settings. It works only through the pre-tool hook or the
-permission rules that the tool's official documentation describes. Start
-only when the user asks for the guard.
+credential or that searches, copies or archives the whole home directory
+(Rule SECRET-1). It also makes the tool ask the user before a call changes
+the guard or the hook settings, or turns hooks off. It works only through
+the pre-tool hook or the permission rules that the tool's official
+documentation describes. Start only when the user asks for the guard.
 
 1. Find your tool in the table below. If it is not in the table, or its
    current documentation describes no pre-tool hook and no permission
    rules, tell the user that the guard is not available for it, and stop.
 2. For a tool with a hook, find the real path of a Python 3 interpreter:
    run `python3 -c "import os, sys; print(os.path.realpath(sys.executable),
-   sys.prefix == sys.base_prefix)"` (on Windows, `py -3` or `python`
-   instead of `python3`). Use the printed path only when the second value
+   sys.prefix == sys.base_prefix)"` (on Windows, also try `py -3` and
+   `python`). Use the printed path only when the second value
    is `True` and the path is not a shim of a version manager (pyenv, asdf,
    mise) or a project virtual environment, because those can change or
    vanish. If the printed path names a minor version (for example
    `/usr/bin/python3.14`) and an unversioned name in the same directory
    (`/usr/bin/python3`) resolves to the same file, use the unversioned
    name: a package upgrade removes the versioned file but keeps that name.
+   On Windows, run `icacls` on the interpreter's directory, and skip an
+   interpreter whose directory grants write or modify access to
+   `Everyone`, `Users` or `Authenticated Users`: any program of any
+   account could then replace it and turn the guard off. A directory
+   created directly under `C:\`, such as `C:\Python314`, inherits such
+   access from the drive root. The interpreter's directory on Windows
+   usually names its version, so tell the user that the hook stops
+   working when that version is removed.
    If no such interpreter exists, tell the user that the guard needs
    Python 3, and stop. Claude Code also needs version 2.1.295 or later for
    `onFailure`.
@@ -120,24 +129,28 @@ only when the user asks for the guard.
    other tools. Give the user the copy command for a terminal outside the
    tool, and continue only after the user has run it.
 4. In the tool's fragment, replace `<python3>` with the interpreter path from
-   step 2 and `<home>` with the absolute path of the user's home directory. Keep
-   the quotes around both, and write `/` instead of `\` in both paths, also on
-   Windows. If your tool runs hook commands through PowerShell, put `&` and a
-   space before the quoted interpreter path. Then merge the fragment into the
-   configuration file. Add the fragment's entries next to the existing ones.
-   NEVER remove or change an existing entry. If the file already holds other
-   content, show the user the exact addition and wait for approval. Keep the
-   original content, and restore it if the merged file does not parse as JSON
-   (JSONC for OpenCode).
+   step 2 and `<home>` with the absolute path of the user's home directory.
+   Write `/` instead of `\` in both paths, also on Windows. The Claude Code
+   fragment uses exec form (`args`): Claude Code starts the interpreter
+   without a shell, so the entry needs no quotes and works the same with or
+   without Git Bash on Windows. In the other fragments, keep the quotes
+   around both paths, and if your tool runs hook commands through
+   PowerShell, put `&` and a space before the quoted interpreter path. Then
+   merge the fragment into the configuration file. Add the fragment's
+   entries next to the existing ones. NEVER remove or change an existing
+   entry. If the file already holds other content, show the user the exact
+   addition and wait for approval. Keep the original content, and restore
+   it if the merged file does not parse as JSON (JSONC for OpenCode).
 5. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
    - `python3 guards/test_guard.py --hook <claude|codex|agy>` reports no
      failure. It runs every guard command that the configuration file
-     holds, exactly as written, through the system shell. It feeds one
-     input that must be blocked and one that must be allowed. No
-     credential is opened. If your tool runs hooks through a different
-     shell (for example PowerShell on Windows), also run the command there.
+     holds, exactly as written: an exec-form entry directly, and a
+     shell-form entry through the system shell. It feeds one input that
+     must be blocked and one that must be allowed. No credential is
+     opened. If your tool runs a shell-form hook through a different shell
+     (for example PowerShell on Windows), also run the command there.
    - For OpenCode, read the merged file back and confirm that it holds
      every rule of the fragment.
 6. Report the locations, both SHA-256 values and the test results. For
@@ -158,7 +171,15 @@ security boundary:
   secret through a glob (`~/.n?trc`), brace expansion, a variable, a
   string built at run time, an encoded name, a working directory set in a
   form it does not parse, a symbolic link named inside a glob or a built
-  string, or a script it wrote earlier.
+  string, a search that names no directory and so searches the working
+  directory, or a script it wrote earlier.
+- It looks for secrets only in files and secret stores. It does not cover
+  secrets in environment variables, the clipboard, shell history, or a
+  tool's own settings file that also holds tokens, such as MCP server
+  settings.
+- It does not resolve network paths such as `\\server\share`, so checking
+  a call does not contact another computer. On Windows, an existing local
+  symbolic link to such a share can still make the check contact it.
 - The existence check trusts that `ls`, `stat` and `test` are the real
   commands. A shell function or an earlier file on `PATH` with the same
   name can turn that check into a read.
@@ -171,11 +192,21 @@ security boundary:
   that step in a terminal outside the tool.
 - Another hook (from a plugin, a skill, an agent definition or a workspace
   file) can rewrite a tool call after the guard allowed it.
-- When it runs out of its time budget (about 4 seconds) or cannot parse
-  the call, it decides from the raw text and blocks when in doubt.
+- When a call names more words or paths than it can check in about 4
+  seconds, it blocks the call and asks the agent to split it. When it
+  cannot parse the call, it decides from the raw text and blocks when in
+  doubt.
 - Claude Code: `disableAllHooks` or a `--settings` override turns the
-  guard off. With `onFailure: "block"`, a deleted or broken guard script
-  blocks every tool call until the user removes the hook entry by hand.
+  guard off. The guard asks before a tool call that names
+  `disableAllHooks`, but a cloned repository can already hold it in its
+  `.claude/settings.json`, which overrides the user's settings in that
+  project. Only hooks in managed settings stay on there. With
+  `onFailure: "block"`, a deleted or broken guard script or a removed
+  interpreter blocks every tool call until the user fixes or removes the
+  hook entry by hand.
+- The guard does not protect its interpreter. When the user's own account
+  can change the interpreter's files, for example in a per-user install
+  under `AppData` on Windows, an agent can turn the guard off through them.
 - Codex has no "ask" decision, so the guard blocks a change to its own
   files instead of asking. Codex may run a tool when its hook fails, times
   out or answers in a wrong format. Input sent later to a running terminal

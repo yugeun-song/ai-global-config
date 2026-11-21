@@ -19,8 +19,10 @@ PROBES = {
 
 def hook_commands(value):
     if isinstance(value, dict):
-        command = value.get("command")
-        if isinstance(command, str) and "ai-global-config-guard.py" in command:
+        command, args = value.get("command"), value.get("args")
+        if isinstance(command, str) and isinstance(args, list) and any("ai-global-config-guard.py" in str(a) for a in args):
+            yield tuple([command] + [str(a) for a in args])
+        elif isinstance(command, str) and "ai-global-config-guard.py" in command:
             yield command
         for item in value.values():
             yield from hook_commands(item)
@@ -38,8 +40,9 @@ def check_hook(tool):
         return 1
     failures = 0
     for command in commands:
+        exec_form = isinstance(command, tuple)
         for expect, event in zip(("deny", "allow"), PROBES[tool]):
-            result = subprocess.run(command, shell=True, input=json.dumps(event).encode("utf-8"), capture_output=True, timeout=30)
+            result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, input=json.dumps(event).encode("utf-8"), capture_output=True, timeout=30)
             out = result.stdout.decode("utf-8", errors="replace").strip()
             if tool == "agy":
                 try:
@@ -56,7 +59,7 @@ def check_hook(tool):
                 else:
                     got = f"exit {result.returncode}"
                 ok = got == expect
-            print(f"{'PASS' if ok else 'FAIL'} hook {expect} probe: got {got}")
+            print(f"{'PASS' if ok else 'FAIL'} hook {expect} probe ({'exec' if exec_form else 'shell'} form): got {got}")
             failures += not ok
     print(f"{path}: {len(commands)} hook command(s), {failures} failed")
     return 1 if failures else 0
@@ -70,12 +73,15 @@ with open(guard, "rb"):
 
 
 def verdict(fmt, payload):
-    result = subprocess.run(
-        [sys.executable, "-I", "-S", guard, fmt],
-        input=payload.encode("utf-8"),
-        capture_output=True,
-        timeout=30,
-    )
+    try:
+        result = subprocess.run(
+            [sys.executable, "-I", "-S", guard, fmt],
+            input=payload.encode("utf-8"),
+            capture_output=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return "error: timeout"
     if result.returncode == 2:
         err = result.stderr.decode("utf-8", errors="replace")
         if fmt != "agy" and ("Blocked by the ai-global-config guard" in err or "The ai-global-config guard protects" in err):
@@ -106,6 +112,18 @@ with open(os.path.join(here, "test-vectors.jsonl"), encoding="utf-8") as vectors
             failures += 1
             print(f"FAIL vector {count}: expected {case['expect']}, got {got}")
 
+words = " ".join(f"word{i}" for i in range(1000))
+long = [
+    ("claude", {"tool_name": "Bash", "tool_input": {"command": f'git commit -m "{words}"'}}, "allow"),
+    ("claude", {"tool_name": "PowerShell", "tool_input": {"command": f"git commit -m @'\n{words}\n'@"}}, "allow"),
+]
+for fmt, event, expect in long:
+    count += 1
+    got = verdict(fmt, json.dumps(event))
+    if got != expect:
+        failures += 1
+        print(f"FAIL vector {count}: expected {expect}, got {got}")
+
 slow = [
     ("claude", {"tool_name": "Bash", "tool_input": {"command": ": " + ".ssh/" * 40000 + "x"}}),
     ("claude", {"tool_name": "Bash", "tool_input": {"command": ".claude/sessions/" * 40000}}),
@@ -116,6 +134,9 @@ slow = [
     ("codex", {"tool_name": "Bash", "tool_input": {"command": "cd a; " * 3000 + "ls " + "b " * 1500}}),
     ("codex", {"tool_name": "Bash", "tool_input": {"command": "cd a;" * 3999 + " x"}}),
     ("codex", {"tool_name": "Bash", "tool_input": {"command": " ".join(f"cd d{i}; cat f{i}" for i in range(1500))}}),
+    ("claude", {"tool_name": "Bash", "tool_input": {"command": "cd //192.0.2.1/share && cat notes.txt"}}),
+    ("claude", {"tool_name": "PowerShell", "tool_input": {"command": "Set-Location \\\\192.0.2.1\\share; Get-Content notes.txt"}}),
+    ("claude", {"tool_name": "Read", "tool_input": {"file_path": "\\??\\UNC\\192.0.2.1\\share\\notes.txt"}}),
 ]
 for fmt, event in slow:
     count += 1

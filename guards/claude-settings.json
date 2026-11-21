@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"<python3>\" -I -S \"<home>/.claude/hooks/ai-global-config-guard.py\" claude",
+            "command": "<python3>",
+            "args": ["-I", "-S", "<home>/.claude/hooks/ai-global-config-guard.py", "claude"],
             "timeout": 10,
             "onFailure": "block"
           }
