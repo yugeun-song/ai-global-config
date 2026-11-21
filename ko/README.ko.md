@@ -30,7 +30,7 @@
 | `rules/parts/` | 같은 규칙을 절마다 한 파일로 자른 것. 규칙 파일 크기를 제한하는 도구용 |
 | `INSTALL.md` | 에이전트가 규칙을 설치하거나 갱신하는 방법 |
 | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | 이 저장소에서 일하는 에이전트를 위한 짧은 안내 |
-| `guards/` | 선택 사항인 강제 장치: Python 3 스크립트 하나와 도구별 설정 조각 |
+| `guards/` | 선택 사항인 강제 장치: Python 3 스크립트 하나와 도구별 설정 조각, 그리고 OpenCode 시스템 정책 스크립트 |
 | `tests/` | 테스트 사례와 실행기 |
 | `ko/` | 한국어 화자를 위한, 내용이 같은 한국어 번역 |
 
@@ -61,7 +61,9 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
 규칙은 글입니다. `guards/`의 선택 사항인 강제 장치는 credential을 지목하는 도구 호출을 도구가
 거부하게 만듭니다. 이 장치는 각 도구가 문서로 밝힌 hook이나 권한 규칙을 씁니다. Claude Code,
 Codex, agy는 hook을, OpenCode는 권한 규칙을 씁니다. hook에는 Python 3가 필요합니다. 설치
-방법은 `INSTALL.md`에 있고, `python3 guards/test_guard.py`로 확인합니다.
+방법은 `INSTALL.md`에 있고, `python3 guards/test_guard.py`로 확인합니다. OpenCode는
+`guards/opencode-system-policy.sh`로 자기 정책을 시스템 설정에도 설치할 수 있습니다. 이
+스크립트는 root 권한으로 실행해야 합니다.
 
 ## 유지 관리
 
