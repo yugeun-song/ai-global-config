@@ -135,6 +135,11 @@ load the same text.
   tool adds by default. When your tool adds none, use the trailer that the
   repository names for your tool, and otherwise add none. For OpenCode, use
   `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`.
+  For Antigravity CLI, use `Assisted-by: Antigravity`: Google publishes no
+  GitHub account and no attribution address for Antigravity, so any
+  `Co-authored-by` address would be a guess. NEVER use
+  `antigravity@google.com`, which an unrelated person's account owns, or
+  the bot of another Google product, such as `gemini-code-assist[bot]`.
   The forge credits a `Co-authored-by` trailer to whichever
   account owns its address, so give it only an address that the tool's
   maker publishes for that purpose. NEVER put a guessed address there, or

@@ -116,6 +116,10 @@ Gemini CLI, OpenCode, Cursor, Hermes Agent를 비롯한 모든 에이전트가 �
   씁니다. 도구가 붙이는 trailer가 없으면 저장소가 그 도구에 정해 둔 trailer를 쓰고, 그것도 없으면
   붙이지 않습니다. OpenCode에서는
   `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`를 씁니다.
+  Antigravity CLI에서는 `Assisted-by: Antigravity`를 씁니다. Google은 Antigravity에 대한 GitHub
+  계정이나 기여 주소를 공개하지 않으므로, 어떤 `Co-authored-by` 주소든 추측입니다.
+  `antigravity@google.com`은 무관한 사람의 계정이므로 절대 쓰지 않고, 다른 Google 제품의 봇인
+  `gemini-code-assist[bot]`도 쓰지 않습니다.
   forge는 `Co-authored-by` trailer를 그 주소를 가진 계정의 기여로 기록하므로, 이 trailer에는 도구 제작사가 그 용도로 공개한 주소만
   씁니다. 추측한 주소나 다른 제품·다른 사람의 주소는 절대 쓰지 않습니다. 그런 주소가 없는 도구는
   어떤 계정의 기여로도 기록되지 않는 `Assisted-by:` trailer에 이름만 남깁니다. trailer를 붙이든
