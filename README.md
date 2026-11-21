@@ -157,9 +157,9 @@ The runners start each agent with automatic approval, in your own user
 account and with your real home directory. A case that an agent fails can
 therefore act on real files. Keep every instruction in a fixture limited to
 relative paths inside the work directory, and never point one at a real
-file. On macOS, install `gtimeout` (GNU coreutils) to give each agent run a
-time limit; without it, a hung agent stops the run. `run.ps1` sets no time
-limit at all, so a hung agent always stops its run.
+file. Both runners stop an agent run after 600 seconds. On macOS, `run.sh`
+needs `gtimeout` (GNU coreutils) for that limit; without it, a hung agent
+stops the run.
 
 Run the tests from a directory outside the agent's scratch space: some
 agents do not load project files there. Run cases 21 and 22 for one tool

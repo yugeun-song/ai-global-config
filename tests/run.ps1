@@ -39,6 +39,39 @@ function Stop-Server([string]$Id) {
 	}
 }
 
+$limit = 600
+
+function Get-ChildIds([int]$Parent) {
+	if (Get-Command Get-CimInstance -ErrorAction SilentlyContinue) {
+		@(Get-CimInstance Win32_Process -Filter "ParentProcessId = $Parent" -ErrorAction SilentlyContinue | ForEach-Object { [int]$_.ProcessId })
+	}
+	else {
+		@(Get-Process | Where-Object { $_.Parent.Id -eq $Parent } | ForEach-Object { $_.Id })
+	}
+}
+
+function Invoke-Agent([scriptblock]$Run) {
+	$before = Get-ChildIds $PID
+	$watch = Start-Job -ArgumentList $PID, $limit, $before -ScriptBlock {
+		param($runner, $seconds, $before)
+		Start-Sleep -Seconds $seconds
+		if (Get-Command Get-CimInstance -ErrorAction SilentlyContinue) {
+			Get-CimInstance Win32_Process -Filter "ParentProcessId = $runner" |
+				Where-Object { $before -notcontains $_.ProcessId -and $_.ProcessId -ne $PID -and $_.Name -ne 'conhost.exe' } |
+				ForEach-Object { taskkill /T /F /PID $_.ProcessId | Out-Null }
+		}
+		else {
+			Get-Process | Where-Object { $_.Parent.Id -eq $runner -and $before -notcontains $_.Id -and $_.Id -ne $PID } |
+				Stop-Process -Force -ErrorAction SilentlyContinue
+		}
+	}
+	try { & $Run }
+	finally {
+		Stop-Job $watch -ErrorAction SilentlyContinue
+		Remove-Job $watch -Force -ErrorAction SilentlyContinue
+	}
+}
+
 $savedEnv = @{}
 foreach ($name in 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM', 'AGC_STATE', 'AGC_CASE_DIR') {
 	$savedEnv[$name] = [Environment]::GetEnvironmentVariable($name)
@@ -112,7 +145,7 @@ try {
 			$session = [guid]::NewGuid().ToString()
 			if ($Tool -eq 'opencode') { $session = 'ses_' + $session.Replace('-', '') }
 			$prompt = Get-Content -Raw -Encoding utf8 (Join-Path $d 'prompt.txt')
-			Invoke-FirstTurn $prompt $session 2>&1 | Out-File -FilePath $out -Encoding utf8
+			Invoke-Agent { Invoke-FirstTurn $prompt $session 2>&1 | Out-File -FilePath $out -Encoding utf8 }
 
 			$prompt2File = Join-Path $d 'prompt2.txt'
 			if (Test-Path $prompt2File) {
@@ -125,7 +158,7 @@ try {
 				}
 				else {
 					$prompt2 = Get-Content -Raw -Encoding utf8 $prompt2File
-					Invoke-SecondTurn $prompt2 $session 2>&1 | Out-File -FilePath $out2 -Encoding utf8
+					Invoke-Agent { Invoke-SecondTurn $prompt2 $session 2>&1 | Out-File -FilePath $out2 -Encoding utf8 }
 				}
 			}
 
