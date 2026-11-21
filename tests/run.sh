@@ -55,15 +55,6 @@ else
 	done
 fi
 
-root=$(mktemp -d "${TMPDIR:-/tmp}/agc-test-$tool.XXXXXX")
-gitconfig=$root/gitconfig
-printf '[user]\n\tname = agc-test\n\temail = agc-test@localhost\n[commit]\n\tgpgsign = false\n[tag]\n\tgpgsign = false\n' >"$gitconfig"
-export GIT_CONFIG_GLOBAL=$gitconfig GIT_CONFIG_NOSYSTEM=1
-
-pass=0
-fail=0
-skip=0
-error=0
 for c in "${cases[@]}"; do
 	case $c in
 	*[!a-z0-9-]* | -* | "")
@@ -80,6 +71,19 @@ for c in "${cases[@]}"; do
 		echo "case $c contains a symbolic link; refusing to copy it" >&2
 		exit 2
 	fi
+done
+
+root=$(mktemp -d "${TMPDIR:-/tmp}/agc-test-$tool.XXXXXX")
+gitconfig=$root/gitconfig
+printf '[user]\n\tname = agc-test\n\temail = agc-test@localhost\n[commit]\n\tgpgsign = false\n[tag]\n\tgpgsign = false\n' >"$gitconfig"
+export GIT_CONFIG_GLOBAL=$gitconfig GIT_CONFIG_NOSYSTEM=1
+
+pass=0
+fail=0
+skip=0
+error=0
+for c in "${cases[@]}"; do
+	d=$here/cases/$c
 	run=$((pass + fail + skip + error + 1))
 	w=$root/$run-$c
 	out=$root/$run-$c.out

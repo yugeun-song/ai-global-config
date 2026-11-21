@@ -27,7 +27,7 @@
 | 경로 | 내용 |
 |---|---|
 | `rules/global.md` | 규칙: 읽는 법, 1부(강제 규칙), 2부(기본값) |
-| `rules/parts/` | 같은 규칙을 목차마다 한 파일로 자른 것. 규칙 파일 크기를 제한하는 도구용 |
+| `rules/parts/` | 같은 규칙을 절마다 한 파일로 자른 것. 규칙 파일 크기를 제한하는 도구용 |
 | `INSTALL.md` | 에이전트가 규칙을 설치하거나 갱신하는 방법 |
 | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | 이 저장소에서 일하는 에이전트를 위한 짧은 안내 |
 | `guards/` | 선택 사항인 강제 장치: Python 3 스크립트 하나와 도구별 설정 조각 |
@@ -84,11 +84,14 @@ Codex, agy는 hook을, OpenCode는 권한 규칙을 씁니다. hook에는 Python
 
 ```text
 tests/run.sh <claude|codex|agy|opencode> [case ...]
-pwsh tests/run.ps1 -Tool <claude|codex|agy|opencode> [-Cases <case>, ...]
+pwsh tests/run.ps1 -Tool <claude|codex|agy|opencode> [-Cases <case>,...]
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\run.ps1 -Tool <claude|codex|agy|opencode> [-Cases <case>,...]
 ```
 
 `run.sh`는 Linux와 macOS(bash 3.2 이상, 한국어 판정용 python3 필요)에서 돌아갑니다. `run.ps1`은
-Windows와, PowerShell 7이 있는 모든 시스템에서 돌아갑니다. 두 실행기의 판정은 같습니다. 사례
+Windows와, PowerShell 7이 있는 모든 시스템에서 돌아갑니다. PowerShell 7이 없는 Windows에서는
+셋째 줄로 Windows PowerShell 5.1에서 실행합니다. `-Cases`에는 사례 이름을 공백 없이 쉼표로
+이어서 줍니다. 두 실행기의 판정은 같습니다. 사례
 이름을 주지 않으면 실행기는 모든 사례를 실행합니다. 사례마다 PASS, FAIL, SKIP 가운데
 하나를 출력하고, 각 사례의 작업 디렉터리와 출력을 담은 디렉터리를 알려 줍니다. 다 쓰면 그
 디렉터리를 지웁니다. 실행할 때마다 에이전트 자체 기록에도 세션이 하나씩 남습니다.
@@ -139,11 +142,13 @@ Windows와, PowerShell 7이 있는 모든 시스템에서 돌아갑니다. 두 �
 실행합니다. 그래서 에이전트가 실패한 사례는 실제 파일에 영향을 줄 수 있습니다. fixture의 모든
 지시는 작업 디렉터리 안의 상대 경로로만 쓰고, 실제 파일을 가리키지 않습니다. macOS에서는 각
 에이전트 실행에 시간 제한을 두도록 `gtimeout`(GNU coreutils)을 설치합니다. 없으면 멈춘 에이전트가
-전체 실행을 멈춥니다.
+전체 실행을 멈춥니다. `run.ps1`은 시간 제한을 전혀 두지 않으므로, 멈춘 에이전트가 언제나 그
+실행을 멈춥니다.
 
 테스트는 에이전트의 scratch 공간 밖 디렉터리에서 실행합니다. 일부 에이전트는 그 안의 프로젝트
 파일을 읽지 않기 때문입니다. 사례 21과 22는 한 번에 도구 하나씩만 실행합니다. 이 두 사례의
-판정은 기기 전체의 프로세스와 컨테이너를 보기 때문입니다.
+판정은 기기 전체의 프로세스와 컨테이너를 보기 때문입니다. podman과 docker가 모두 없으면 사례
+22는 SKIP입니다.
 
 사례 23은 fixture 디렉터리에 있는 미끼 credential 파일 두 개를 씁니다. 하나는 SSH 개인 키이고,
 하나는 netrc 파일입니다. 두 파일 모두 저장소에 들어 있습니다. 두 파일에는 canary 문자열이 든

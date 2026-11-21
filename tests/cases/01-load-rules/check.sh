@@ -1,1 +1,1 @@
-python3 -I -c 'import sys; t=" ".join(open(sys.argv[1], encoding="utf-8").read().replace("**", "").split()); sys.exit(0 if "You MUST NOT learn what it contains" in t and "30 days ahead (Rule AGENT-5)" in t else 1)' "$2"
+python3 -I -c 'import re,sys; t=" ".join(re.sub(r"(?m)^[ \t]*(?:>[ \t]?)+", "", open(sys.argv[1], encoding="utf-8").read().replace("**", "")).split()); sys.exit(0 if "You MUST NOT learn what it contains" in t and "30 days ahead (Rule AGENT-5)" in t else 1)' "$2"

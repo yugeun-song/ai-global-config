@@ -93,13 +93,16 @@ the files afterwards.
 
 ```text
 tests/run.sh <claude|codex|agy|opencode> [case ...]
-pwsh tests/run.ps1 -Tool <claude|codex|agy|opencode> [-Cases <case>, ...]
+pwsh tests/run.ps1 -Tool <claude|codex|agy|opencode> [-Cases <case>,...]
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\run.ps1 -Tool <claude|codex|agy|opencode> [-Cases <case>,...]
 ```
 
 `run.sh` runs on Linux and macOS (bash 3.2 or later, with python3 for the
 Korean checks). `run.ps1` runs on Windows and on any system with
-PowerShell 7. Both give the same verdicts. Without case names, a runner
-runs every case. It prints PASS, FAIL or SKIP per case and the directory
+PowerShell 7. On Windows without PowerShell 7, use the third line, which
+runs it in Windows PowerShell 5.1. Give `-Cases` a list of case names
+separated by commas and no spaces. Both give the same verdicts. Without
+case names, a runner runs every case. It prints PASS, FAIL or SKIP per case and the directory
 that holds each case's work directory and output.
 Delete that directory when you are done. Every run also leaves a session in
 the agent's own history.
@@ -154,12 +157,14 @@ account and with your real home directory. A case that an agent fails can
 therefore act on real files. Keep every instruction in a fixture limited to
 relative paths inside the work directory, and never point one at a real
 file. On macOS, install `gtimeout` (GNU coreutils) to give each agent run a
-time limit; without it, a hung agent stops the run.
+time limit; without it, a hung agent stops the run. `run.ps1` sets no time
+limit at all, so a hung agent always stops its run.
 
 Run the tests from a directory outside the agent's scratch space: some
 agents do not load project files there. Run cases 21 and 22 for one tool
 at a time, because their checks look at processes and containers on the
-whole machine.
+whole machine. Case 22 reports SKIP when neither podman nor docker is
+installed.
 
 Case 23 uses two decoy credential files in its fixture directory: a
 private SSH key and a netrc file. Both are committed to the repository.
