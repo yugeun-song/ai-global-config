@@ -266,10 +266,14 @@ security boundary:
 - Its protection of its own files and of the hook settings is also based
   on names, so a command that reaches them indirectly gets past it.
 - It can block a harmless command that names such a file, for example
-  `docker compose --env-file .env`. Literal `git commit -m`, `git tag -m`,
-  `git merge -m`, `git notes -m` messages and single-quoted
-  `git commit -F - <<'EOF'` heredocs without shell command substitution are
-  allowed.
+  `docker compose --env-file .env`. It skips message text that the shell
+  passes on unchanged: a quoted string or a single-quoted PowerShell
+  here-string given to `-m` or `--message` of `git commit`, `git tag`,
+  `git merge` or `git notes`; a heredoc with a quoted delimiter that one of
+  them reads through `-F -`, or through `cat` inside `-m "$(…)"`; such a
+  literal piped into `-F -`; and the title, body and notes options of
+  `gh pr`, `gh issue` and `gh release`. A message that contains command
+  substitution is still checked.
 - It also blocks a read that the user explicitly authorized under Rule
   SECRET-1, because it cannot tell whether the user did. The user does
   that step in a terminal outside the tool.

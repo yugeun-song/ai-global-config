@@ -215,9 +215,12 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
 - 강제 장치 자신과 hook 설정의 보호도 이름으로 판정하므로, 간접적으로 닿는 명령은 막지
   못합니다.
 - 그런 파일 이름이 들어간 무해한 명령은 막을 수 있습니다. 예를 들어
-  `docker compose --env-file .env`가 그렇습니다. shell 명령 치환이 없는 문자
-  그대로의 `git commit -m`, `git tag -m`, `git merge -m`, `git notes -m`
-  메시지와 작은따옴표 `git commit -F - <<'EOF'` heredoc은 허용합니다.
+  `docker compose --env-file .env`가 그렇습니다. shell이 바꾸지 않고 넘기는 메시지 글은 검사하지
+  않습니다. `git commit`, `git tag`, `git merge`, `git notes`의 `-m`이나 `--message`에 준 따옴표
+  문자열이나 작은따옴표 PowerShell here-string, 그 명령이 `-F -`로 읽거나 `-m "$(…)"` 안의
+  `cat`으로 읽는, 끝 표지를 따옴표로 감싼 heredoc, `-F -`로 파이프해 넘긴 그런 리터럴, 그리고
+  `gh pr`, `gh issue`, `gh release`의 제목, 본문, 노트 옵션이 그렇습니다. 명령 치환이 든 메시지는
+  그대로 검사합니다.
 - 사용자가 Rule SECRET-1에 따라 명시적으로 허락한 읽기도 막습니다. 사용자가 허락했는지 판정기는
   알 수 없기 때문입니다. 그 단계는 사용자가 도구 밖 터미널에서 합니다.
 - 다른 hook(plugin, skill, 에이전트 정의, 작업 공간 파일에서 온 hook)은 강제 장치가 허용한

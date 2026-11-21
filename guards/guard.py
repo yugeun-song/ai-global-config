@@ -5,6 +5,8 @@ import shlex
 import sys
 import time
 
+OPTION_REACH = 300
+REACH = "{0,%d}?" % OPTION_REACH
 SECRET = re.compile(
     r"(?<![\w.-])\.ssh(?![\w.-])|(?<![\w.-])SSH~\d"
     r"|(?<![\w.-])\.gnupg(?![\w.-])|(?<![\w.-])GNUPG~\d"
@@ -25,7 +27,7 @@ SECRET = re.compile(
     r"|\bsecret-tool\b|\bkwallet-query\b|\bcmdkey\b|\bvaultcmd\b|Get-StoredCredential|\bGet-Secret\b|\bPasswordVault\b"
     r"|\bgh\s+auth\s+token\b|\bsecurity\s+(?:find-(?:generic|internet)-password|dump-keychain)\b"
     r"|\bgcloud\s+auth\s+(?:application-default\s+)?print-(?:access|identity)-token\b"
-    r"|\bkubectl\s+config\s+view\b[^\n]{0,300}?--raw|\bgit(?:\s+|-)credential(?:-[\w-]+)?(?:\.exe)?\s+(?:fill|get)\b",
+    r"|\bkubectl\s+config\s+view\b[^\n]" + REACH + r"--raw|\bgit(?:\s+|-)credential(?:-[\w-]+)?(?:\.exe)?\s+(?:fill|get)\b",
     re.IGNORECASE,
 )
 ENV_FILE = re.compile(
@@ -46,18 +48,18 @@ SECRET_DIR_NAME = re.compile(
 SWEEPING = re.compile(
     r"\b(?:grep|egrep|fgrep)\s+(?:-\w*\s+)*-\w*[rR]|\brg\b|\bag\b|\back\b|(?<![.\w-])(?:tar|zip|7z)\b"
     r"|\brsync\b|\bcp\s+(?:-\w*\s+)*-\w*[rRa]|\bfind\b|\bcpio\b|\bscp\b"
-    r"|\b(?:Copy-Item|cpi|copy|cp|Get-ChildItem|gci)\b[^;&|\n]{0,200}?\s-r\w*"
+    r"|\b(?:Copy-Item|cpi|copy|cp|Get-ChildItem|gci)\b[^;&|\n]" + REACH + r"\s-r\w*"
     r"|\bCompress-Archive\b|\brobocopy\b|\bxcopy\b|\bSelect-String\b|\bsls\b|\bfindstr\b"
-    r"|\bln\b|\bmklink\b|\bsubst\b|\b(?:New-Item|ni)\b[^;&|\n]{0,200}?\s-(?:Item)?Type\s+[\"']?(?:Junction|SymbolicLink|HardLink)\b",
+    r"|\bln\b|\bmklink\b|\bsubst\b|\b(?:New-Item|ni)\b[^;&|\n]" + REACH + r"\s-(?:Item)?Type\s+[\"']?(?:Junction|SymbolicLink|HardLink)\b",
     re.IGNORECASE,
 )
 HOME_SWEEPING = re.compile(
     r"\b(?:grep|egrep|fgrep)\s+(?:-\w*\s+)*-\w*[rR]|\brg\b|\bag\b|\back\b|(?<![.\w-])(?:tar|zip|7z)\b"
     r"|\brsync\b|\bcp\s+(?:-\w*\s+)*-\w*[rRa]|\bcpio\b|\bscp\b"
-    r"|\b(?:Copy-Item|cpi|copy|cp)\b[^;&|\n]{0,200}?\s-r\w*"
+    r"|\b(?:Copy-Item|cpi|copy|cp)\b[^;&|\n]" + REACH + r"\s-r\w*"
     r"|\bCompress-Archive\b|\brobocopy\b|\bxcopy\b|\bSelect-String\b|\bsls\b|\bfindstr\b"
-    r"|\bfind\b[^;&|\n]{0,300}?\s-(?:exec|execdir|ok|okdir)\b|\|\s*xargs\b"
-    r"|\b(?:Get-ChildItem|gci|dir|ls)\b[^;&\n]{0,300}?\|\s*(?:Get-Content|gc|cat|type|Copy-Item|cpi)\b",
+    r"|\bfind\b[^;&|\n]" + REACH + r"\s-(?:exec|execdir|ok|okdir)\b|\|\s*xargs\b"
+    r"|\b(?:Get-ChildItem|gci|dir|ls)\b[^;&\n]" + REACH + r"\|\s*(?:Get-Content|gc|cat|type|Copy-Item|cpi)\b",
     re.IGNORECASE,
 )
 HOME_VAR = re.compile(r"^(?:\$HOME|\$\{HOME\}|\$env:USERPROFILE|\$env:HOME|%USERPROFILE%)(?=/|$)", re.IGNORECASE)
@@ -130,6 +132,12 @@ GIT_GLOBAL_VALUE_FLAGS = {"-c", "--git-dir", "--work-tree", "--namespace", "--co
 GIT_MESSAGE_SUBS = {"commit", "tag", "merge", "notes"}
 GIT_SHORT_M = re.compile(r"^-[asevqnoSu]*m$")
 HEREDOC_OPEN = re.compile(r"<<(-?)([\"'])([A-Za-z0-9_]+)\2")
+CAT_MESSAGE = re.compile(r"(?:^|\s)(?:-[asevqnoSu]*m|--message)(?:\s+|=)\"\$\(\s*cat\s*$")
+CAT_MESSAGE_CLOSE = re.compile(r"\s*\)\"")
+MESSAGE_SOURCES = {"echo", "printf", "write-output"}
+GH_TEXT_SUBS = {"pr", "issue", "release"}
+GH_TEXT_ACTIONS = {"create", "edit", "comment", "review", "merge"}
+GH_TEXT_FLAGS = {"--title", "-t", "--body", "-b", "--notes", "-n", "--subject"}
 PYTHON_CMDS = {"python", "python3", "python.exe", "py", "py.exe"}
 PYTHON_SAFE_FLAGS = {"-I", "-S", "-B", "-u", "-E", "-s"}
 SEP = r"[\\/]" if os.name == "nt" else "/"
@@ -145,9 +153,14 @@ HOOK_SWITCH = re.compile(r"disableAllHooks", re.IGNORECASE)
 MAX_REALPATH = 4096
 MAX_BASES = 8
 MAX_SEGMENTS = 100
+MAX_WORDS = 2000
+MAX_PARSED_CHARS = 20000
+MAX_SEGMENTED_CHARS = 40000
+MAX_STRIPPED_CHARS = 200000
 REALPATH_BUDGET = 2000
 EXISTS_BUDGET = 4000
-DEADLINE = time.monotonic() + 4.0
+CHECK_SECONDS = 4.0
+DEADLINE = time.monotonic() + CHECK_SECONDS
 
 
 class OverBudget(Exception):
@@ -363,8 +376,20 @@ def is_home(forms):
     return any(os.path.normcase(form).replace("\\", "/").rstrip("/") in ("~", home) for form in forms)
 
 
+def here_string_end(text, i):
+    if not text.startswith(("@'", '@"'), i):
+        return None
+    start = i + 2
+    if text.startswith("\r\n", start):
+        start += 1
+    if not text.startswith("\n", start):
+        return None
+    end = text.find("\n" + text[i + 1] + "@", start)
+    return len(text) if end == -1 else end + 3
+
+
 def split_segments(command):
-    if len(command) > 40000:
+    if len(command) > MAX_SEGMENTED_CHARS:
         return [("", command)]
     segments = []
     start = 0
@@ -385,6 +410,10 @@ def split_segments(command):
             continue
         if ch == "\\" and i + 1 < n:
             i += 2
+            continue
+        end = here_string_end(command, i)
+        if end is not None:
+            i = end
             continue
         if ch in ("'", '"'):
             quote = ch
@@ -509,6 +538,10 @@ def git_subcommand_index(toks):
     return None
 
 
+def reads_stdin_message(words):
+    return any(w == "--file=-" or (w in ("-F", "--file") and k + 1 < len(words) and words[k + 1] == "-") for k, w in enumerate(words))
+
+
 def strip_git_heredocs(command):
     if "<<" not in command or "git" not in command.lower():
         return command
@@ -527,15 +560,13 @@ def strip_git_heredocs(command):
             tail = segs[-1][1] if segs else ""
             toks = scan_simple_tokens(tail)
             sub_idx = git_subcommand_index(toks)
-            is_commit_stdin = False
-            if sub_idx is not None and toks[sub_idx][2] == "commit":
-                words = [t[2] for t in toks[sub_idx + 1:]]
-                for k, w in enumerate(words):
-                    if w == "--file=-":
-                        is_commit_stdin = True
-                    elif w in ("-F", "--file") and k + 1 < len(words) and words[k + 1] == "-":
-                        is_commit_stdin = True
-            if is_commit_stdin:
+            literal = in_cat = False
+            if sub_idx is not None and toks[sub_idx][2] in GIT_MESSAGE_SUBS:
+                if CAT_MESSAGE.search(tail) and not line[match.end():].strip():
+                    literal = in_cat = True
+                elif reads_stdin_message([t[2] for t in toks[sub_idx + 1:]]):
+                    literal = True
+            if literal:
                 j = i + 1
                 found_end = None
                 while j < len(lines):
@@ -546,7 +577,7 @@ def strip_git_heredocs(command):
                         found_end = j
                         break
                     j += 1
-                if found_end is not None:
+                if found_end is not None and (not in_cat or CAT_MESSAGE_CLOSE.match("".join(lines[found_end + 1:]))):
                     out.append("_\n")
                     out.append(lines[found_end])
                     i = found_end + 1
@@ -555,47 +586,80 @@ def strip_git_heredocs(command):
     return "".join(out)
 
 
-def strip_git_messages(command):
-    if "git" not in command.lower():
+def safe_message_source(text):
+    toks = scan_simple_tokens(text)
+    if not toks or text[toks[-1][1]:].strip():
+        return False
+    if len(toks) == 1:
+        return toks[0][2].startswith("@'") and is_safe_literal_quote(toks[0][2])
+    if toks[0][2].lower() not in MESSAGE_SOURCES:
+        return False
+    for _, _, word in toks[1:]:
+        if word[0] in "'\"@":
+            if not is_safe_literal_quote(word):
+                return False
+        elif "'" in word or '"' in word:
+            return False
+    return True
+
+
+def message_options(toks):
+    sub_idx = git_subcommand_index(toks)
+    if sub_idx is not None and toks[sub_idx][2] in GIT_MESSAGE_SUBS:
+        return sub_idx + 1, lambda w: w in ("-m", "--message") or bool(GIT_SHORT_M.match(w)), ("--message=",)
+    if len(toks) > 2 and toks[0][2].lower() in ("gh", "gh.exe") and toks[1][2] in GH_TEXT_SUBS and toks[2][2] in GH_TEXT_ACTIONS:
+        return 3, lambda w: w in GH_TEXT_FLAGS, tuple(f + "=" for f in sorted(GH_TEXT_FLAGS) if f.startswith("--"))
+    return None
+
+
+def strip_segment_message(seg):
+    stages = split_pipes(seg)
+    if len(stages) == 2 and safe_message_source(stages[0]):
+        toks = scan_simple_tokens(stages[1])
+        sub_idx = git_subcommand_index(toks)
+        if sub_idx is not None and toks[sub_idx][2] in GIT_MESSAGE_SUBS and reads_stdin_message([t[2] for t in toks[sub_idx + 1:]]):
+            return "_ |" + stages[1]
+    toks = scan_simple_tokens(seg)
+    found = message_options(toks)
+    if found is None:
+        return seg
+    k, takes_text, prefixes = found
+    replacements = []
+    while k < len(toks):
+        start, end, word = toks[k]
+        if takes_text(word):
+            if k + 1 < len(toks) and is_safe_literal_quote(toks[k + 1][2]):
+                replacements.append((toks[k + 1][0], toks[k + 1][1]))
+                k += 2
+                continue
+        else:
+            for prefix in prefixes:
+                if word.startswith(prefix) and is_safe_literal_quote(word[len(prefix):]):
+                    replacements.append((start + len(prefix), end))
+                    break
+        k += 1
+    parts = []
+    pos = 0
+    for s, e in replacements:
+        parts.append(seg[pos:s])
+        parts.append("_")
+        pos = e
+    parts.append(seg[pos:])
+    return "".join(parts)
+
+
+def strip_messages(command):
+    lowered = command.lower()
+    if "git" not in lowered and "gh" not in lowered:
         return command
     command = strip_git_heredocs(command)
-    if len(command) > 200000:
+    if len(command) > MAX_STRIPPED_CHARS:
         return command
-    segments = split_segments(command)
     rebuilt = []
-    for sep, seg in segments:
+    for sep, seg in split_segments(command):
         if sep:
             rebuilt.append(sep)
-        toks = scan_simple_tokens(seg)
-        sub_idx = git_subcommand_index(toks)
-        if sub_idx is None or toks[sub_idx][2] not in GIT_MESSAGE_SUBS:
-            rebuilt.append(seg)
-            continue
-        replacements = []
-        k = sub_idx + 1
-        while k < len(toks):
-            start, end, word = toks[k]
-            if word in ("-m", "--message") or GIT_SHORT_M.match(word):
-                if k + 1 < len(toks) and is_safe_literal_quote(toks[k + 1][2]):
-                    replacements.append((toks[k + 1][0], toks[k + 1][1], "_"))
-                    k += 2
-                    continue
-            elif word.startswith("--message="):
-                val = word[len("--message="):]
-                if is_safe_literal_quote(val):
-                    replacements.append((start + len("--message="), end, "_"))
-            k += 1
-        if not replacements:
-            rebuilt.append(seg)
-            continue
-        parts = []
-        pos = 0
-        for s, e, rep in replacements:
-            parts.append(seg[pos:s])
-            parts.append(rep)
-            pos = e
-        parts.append(seg[pos:])
-        rebuilt.append("".join(parts))
+        rebuilt.append(strip_segment_message(seg))
     return "".join(rebuilt)
 
 
@@ -617,6 +681,10 @@ def split_pipes(segment):
             continue
         if ch == "\\" and i + 1 < n:
             i += 2
+            continue
+        end = here_string_end(segment, i)
+        if end is not None:
+            i = end
             continue
         if ch in ("'", '"'):
             quote = ch
@@ -724,7 +792,7 @@ def is_read_only_stage(stage, is_pipe_sink):
 
 
 def is_read_only_command(command):
-    if not command or len(command) > 20000:
+    if not command or len(command) > MAX_PARSED_CHARS:
         return False
     if has_unquoted_construct(command, ("$(", "`", "<(", ">(")):
         return False
@@ -742,12 +810,12 @@ def is_read_only_command(command):
 
 
 def tokens(command):
-    if len(command) > 20000:
-        return command.split()[:2000]
+    if len(command) > MAX_PARSED_CHARS:
+        return command.split()[:MAX_WORDS]
     try:
-        return shlex.split(command, posix=True)[:2000]
+        return shlex.split(command, posix=True)[:MAX_WORDS]
     except ValueError:
-        return command.split()[:2000]
+        return command.split()[:MAX_WORDS]
 
 
 def patch_targets(args):
@@ -760,8 +828,8 @@ def patch_targets(args):
 def command_words(command):
     slashed = command.replace("\\", "/")
     shell = tokens(command) + (tokens(slashed) if slashed != command else [])
-    whole = list(dict.fromkeys(w for w in shell + WORD_BREAK.split(ESCAPES.sub(" ", slashed))[:2000] if w))
-    pieces = ESCAPES.sub(" ", command).split()[:2000]
+    whole = list(dict.fromkeys(w for w in shell + WORD_BREAK.split(ESCAPES.sub(" ", slashed))[:MAX_WORDS] if w))
+    pieces = ESCAPES.sub(" ", command).split()[:MAX_WORDS]
     return list(dict.fromkeys(whole + pieces)), whole, shell
 
 
@@ -780,7 +848,7 @@ def resolve_cd_targets(cd_targets, current_bases):
 def check_command(command, bases):
     if not command:
         return "allow"
-    command = strip_git_messages(DIRENV.sub("direnv", command))
+    command = strip_messages(DIRENV.sub("direnv", command))
     words, whole, shell = command_words(command)
     cd_words = [m.strip("\"'") for m in CD.findall(command)]
     cd_bases = [expand(m) for m in cd_words]
