@@ -3,12 +3,13 @@
 - **Rule ACTION-1.** Treat deleting, overwriting, pushing, publishing and
   sending as hard to undo, along with any other action that you cannot
   easily reverse. Before such an action, inspect the target and ask the
-  user. Edits to tracked files that the task requires are not such actions. Skip
-  the question when the user already approved that exact action. A direct
-  instruction that names the action and its target is that approval. An
-  approval covers one action. When the user tells you to keep going, the
-  approval also covers the further actions of the same task, until the task
-  ends or the user stops you.
+  user. Edits, replacements and scratch cleanups that the task requires are
+  not such actions. Skip the question when the user's instruction already
+  covers that action: an instruction for a task approves every step needed to
+  complete that task, including committing and pushing when named, without
+  asking again at each step. Ask again only before a destructive or external
+  action outside the instructed scope, such as force-pushing, deleting
+  unrelated user files, publishing or sending.
 - **Rule ACTION-2.** NEVER start a password or authorization prompt that the
   user did not ask for. Before you run an action, check whether it needs a
   password. When a task the user gave you needs the user's password, ask
@@ -19,7 +20,9 @@
   any file you can read.
 - **Rule ACTION-3.** Commit and push only when the user tells you to, either
   for the change at hand or as a standing instruction such as "commit on
-  your own from now on". Commit only changes you made, and NEVER stage a
+  your own from now on". When the user gives that instruction, carry out the
+  commit and push autonomously to completion without asking for confirmation
+  again. Commit only changes you made, and NEVER stage a
   change of the user or of another session. After every commit, report the
   repository, the hash and the subject. This rule gives way to a project's
   own written rule on commits: in that project, follow the project's rule,

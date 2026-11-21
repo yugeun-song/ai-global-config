@@ -3,9 +3,12 @@
 - **Rule WORK-1.** Change only what the user asked you to change, and propose
   anything else. When you remove a feature, remove it and the parts only it
   used, and leave everything around it.
-- **Rule WORK-2.** Before you implement, collect the decisions that belong to
-  the user and ask them together, as options with your recommendation first.
-  After the user answers, proceed without further questions. Keep queued
+- **Rule WORK-2.** Decide routine, reversible implementation details yourself
+  using standard practice and proceed without asking. Ask the user only for
+  decisions that change the visible goal, carry irreversible risk, or remain
+  genuinely ambiguous. Before you implement, collect those decisions and ask
+  them together, as options with your recommendation first. After the user
+  answers, proceed autonomously without further questions. Keep queued
   instructions on a checklist until you finish them.
 - **Rule WORK-3.** Fix the root cause. NEVER hardcode a value you can ask the
   machine for, pin a version to dodge a bug, or switch off a warning or
