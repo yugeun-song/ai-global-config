@@ -60,6 +60,9 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
    - 이 기기에서만 맞는 내용만 낱말 하나 바꾸지 않고 남깁니다. 이 기기의 하드웨어,
      소프트웨어, 경로, 네트워크, 로컬 도구에 관한 사실과 그 도구에 관한 규칙이 여기에
      해당합니다. 어떤 구절이 전역 규칙인지 이 기기의 메모인지 판단할 수 없으면 남깁니다.
+     두 도구가 지침 파일을 공유하면(예: Gemini CLI와 Antigravity CLI가 함께 읽는
+     `~/.gemini/GEMINI.md`), 다른 도구가 설치한 `ai-global-config` import 줄이나 표지 블록은
+     그대로 둡니다.
    - 파일 맨 앞에 짧은 머리글을 둡니다. 머리글에는 설치한 사본의 위치와, 이 파일에는 이
      기기의 메모만 있다는 문장을 적습니다.
    - 지운 내용, 남긴 내용, 백업 경로를 보고합니다. 지운 구절 가운데 `rules/global.md`에 없는
@@ -201,16 +204,19 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
      Python 3.6 이상이 필요하고, 스크립트는 `python3`, `/usr/libexec/platform-python`, `python`
      순서로 그 인터프리터를 찾습니다. Windows에서 OpenCode는 `%ProgramData%\opencode`에서 시스템
      파일을 읽지만, 이 스크립트는 그곳을 설정하지 않습니다.
-   - Antigravity CLI, 권한. agy는 에이전트가 `~/.gemini/antigravity-cli/settings.json`을 읽거나
-     고치지 못하게 막습니다. agy는 auto 모드에서도 워크스페이스 밖을 읽기 전과, sandbox 밖에서 도는
-     명령 앞에서 묻습니다. sandbox가 `.git`을 읽기 전용으로 붙이므로 git 명령은 sandbox 밖에서
-     돌아야 합니다. `bash guards/agy-permissions.sh`는 그 파일을 백업하고, 기존 키와 규칙을
-     유지하면서 auto 모드와 워크스페이스 밖 접근을 켜고, 모든 명령, sandbox 밖 명령, 파일 읽기,
-     파일 쓰기를 허용합니다. 그러면 이런 호출에는 강제 장치만 검사로 남습니다. 이 스크립트는
+   - Antigravity CLI, 권한. agy는 에이전트가 `~/.gemini/antigravity-cli/settings.json`을 직접
+     고치지 못하게 막습니다. agy는 auto 모드에서도 워크스페이스 밖을 읽기 전과, sandbox 밖에서
+     도는 위험하거나 되돌리기 어려운 명령 앞에서 묻습니다. `bash guards/agy-permissions.sh`는
+     그 파일을 백업하고, 기존 키와 규칙을 유지하면서 auto 모드와 워크스페이스 밖 접근을 켜고,
+     모든 명령(`command(*)`, 개인 계정에서는 sandbox 안팎 명령을 모두 다룸), 파일 읽기, 파일
+     쓰기를 허용합니다. 그러면 이런 호출에는 강제 장치만 검사로 남습니다. 이 스크립트는
      `command(rm -rf /)`도 거부합니다. `--no-write-all`, `--no-read-all`, `--dir DIR`,
-     `--unsandboxed CMD` 옵션으로 허용 범위를 줄일 수 있습니다. 이 스크립트에는 bash와 Python 3.6
-     이상이 필요하고, OpenCode 스크립트와 같은 방식으로 Python을 찾습니다. Windows에서는 사용자가
-     Git Bash에서 실행합니다.
+     `--unsandboxed CMD` 옵션으로 허용 범위를 조정할 수 있습니다. 개인 계정은 `unsandboxed`
+     규칙을 무시하고 경고를 띄우므로, `--unsandboxed '*'`(또는 특정 명령)는 비즈니스·엔터프라이즈
+     계정에서만 넘깁니다. `$(...)`, 역따옴표, `<(...)`, `{a,b}`처럼 접두사 일치를 끄는 shell
+     구문은 정확한 일치 규칙, `regex:` 규칙, `toolPermission` 설정이 없으면 여전히 묻습니다. 이
+     스크립트에는 bash와 Python 3.6 이상이 필요하고, OpenCode 스크립트와 같은 방식으로 Python을
+     찾습니다. Windows에서는 사용자가 Git Bash에서 실행합니다.
 6. 강제 장치를 확인합니다.
    - `python3 guards/test_guard.py <설치한 판정기>`가 실패 없이 끝납니다.
    - 설치한 판정기의 SHA-256이 `guards/guard.py`의 SHA-256과 같습니다.
@@ -254,11 +260,12 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
   못합니다.
 - 그런 파일 이름이 들어간 무해한 명령은 막을 수 있습니다. 예를 들어
   `docker compose --env-file .env`가 그렇습니다. shell이 바꾸지 않고 넘기는 메시지 글은 검사하지
-  않습니다. `git commit`, `git tag`, `git merge`, `git notes`의 `-m`이나 `--message`에 준 따옴표
-  문자열이나 작은따옴표 PowerShell here-string, 그 명령이 `-F -`로 읽거나 `-m "$(…)"` 안의
-  `cat`으로 읽는, 끝 표지를 따옴표로 감싼 heredoc, `-F -`로 파이프해 넘긴 그런 리터럴, 그리고
-  `gh pr`, `gh issue`, `gh release`의 제목, 본문, 노트 옵션이 그렇습니다. 명령 치환이 든 메시지는
-  그대로 검사합니다.
+  않습니다. `git commit`, `git tag`, `git merge`, `git notes`의 `-m`이나 `--message`, 또는
+  `gh pr`, `gh issue`, `gh release`의 제목, 본문, 노트 옵션에 준 따옴표 문자열이나 작은따옴표
+  PowerShell here-string, 이 명령이 표준 입력(`-F -`, `--body-file -`, `--notes-file -`)으로
+  읽거나 그 텍스트 옵션의 `"$(…)"` 안의 `cat`으로 읽는 끝 표지를 따옴표로 감싼 heredoc, 그리고
+  그 표준 입력 옵션으로 파이프해 넘긴 그런 리터럴이 여기에 해당합니다. 명령 치환이 든 메시지나
+  `-F`, `--body-file`, `--notes-file`에 준 파일 경로는 그대로 검사합니다.
 - 사용자가 Rule SECRET-1에 따라 명시적으로 허락한 읽기도 막습니다. 사용자가 허락했는지 판정기는
   알 수 없기 때문입니다. 그 단계는 사용자가 도구 밖 터미널에서 합니다.
 - 다른 hook(plugin, skill, 에이전트 정의, 작업 공간 파일에서 온 hook)은 강제 장치가 허용한
@@ -288,8 +295,9 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
   같은 호스팅 도구는 hook을 거치지 않습니다.
 - Antigravity CLI는 hook이 실패할 때의 동작을 문서에 밝히지 않습니다. 그래서 실패하면 호출이
   실행된다고 보고 대합니다. 온라인 문서는 `"allow"`가 호출을 다음 hook이나 기본 정책에
-  넘긴다고 적지만, 1.5.13 버전에 들어 있는 문서는 `"allow"`가 호출을 승인한다고 적습니다. 두
-  번째 해석이 맞다면, 강제 장치 때문에 agy의 승인 확인이 생략됩니다.
+  넘기고(기본 정책이 물을 때 자동 승인하는 값은 `"auto_approve"`), 1.5.14 버전에 들어 있는 문서는
+  여전히 `"allow"`가 호출을 승인한다고 적습니다. 두 번째 해석이 맞다면, 강제 장치 때문에 agy의
+  승인 확인이 생략됩니다.
 - Gemini CLI: `BeforeTool` hook은 밀리초 단위 `timeout`(설정 조각은 10초에
   해당하는 `10000`을 씀)과 정규식 `matcher`(`".*"`)를 쓰며, `"allow"`와
   `"deny"` 결정만 지원합니다(`"ask"` 결정이 없음). 그래서 강제 장치는 자기

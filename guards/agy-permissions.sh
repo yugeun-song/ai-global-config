@@ -4,9 +4,8 @@ set -euo pipefail
 DST=""
 WRITE_ALL=1
 NO_READ_ALL=0
-NO_UNSANDBOXED_ALL=0
-DIRS=()
 UNSANDBOXED_CMDS=()
+DIRS=()
 
 usage() {
   cat <<'EOF'
@@ -23,12 +22,14 @@ PreToolUse credential guard continues blocking secrets.
   --write-all            Add write_file(*) to permissions.allow (default).
   --no-write-all         Do not add write_file(*) to permissions.allow.
   --no-read-all          Do not add read_file(*) to permissions.allow.
-  --unsandboxed CMD      Add unsandboxed(CMD) instead of unsandboxed(*) (repeatable).
+  --unsandboxed CMD      Add unsandboxed(CMD) to permissions.allow (repeatable;
+                         for business/enterprise accounts, e.g. --unsandboxed '*';
+                         personal accounts ignore unsandboxed rules and use command(*)).
   -h, --help             Show this help.
 
-Antigravity CLI blocks agents from reading or editing settings.json directly,
-so run this script in your own terminal. It backs up an existing destination,
-keeps all existing keys and rules, appends missing rules, and validates JSON.
+Antigravity CLI blocks agents from editing settings.json directly, so run
+this script in your own terminal. It backs up an existing destination, keeps
+all existing keys and rules, appends missing rules, and validates JSON.
 EOF
 }
 
@@ -66,7 +67,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --unsandboxed)
       need_value "$@"
-      NO_UNSANDBOXED_ALL=1
       UNSANDBOXED_CMDS+=("$2")
       shift 2
       ;;
@@ -108,7 +108,7 @@ if [[ -f "$DST" ]]; then
   echo "Backup: $BACKUP"
 fi
 
-"$PY" - "$DST" "$WRITE_ALL" "$NO_READ_ALL" "$NO_UNSANDBOXED_ALL" "${#DIRS[@]}" ${DIRS[@]+"${DIRS[@]}"} ${UNSANDBOXED_CMDS[@]+"${UNSANDBOXED_CMDS[@]}"} <<'PY'
+"$PY" - "$DST" "$WRITE_ALL" "$NO_READ_ALL" "${#DIRS[@]}" ${DIRS[@]+"${DIRS[@]}"} ${UNSANDBOXED_CMDS[@]+"${UNSANDBOXED_CMDS[@]}"} <<'PY'
 import json
 import os
 import stat
@@ -118,10 +118,9 @@ import tempfile
 dst = sys.argv[1]
 write_all = sys.argv[2] == "1"
 no_read_all = sys.argv[3] == "1"
-no_unsandboxed_all = sys.argv[4] == "1"
-num_dirs = int(sys.argv[5])
-dirs = sys.argv[6:6 + num_dirs]
-unsandboxed_cmds = sys.argv[6 + num_dirs:]
+num_dirs = int(sys.argv[4])
+dirs = sys.argv[5:5 + num_dirs]
+unsandboxed_cmds = sys.argv[5 + num_dirs:]
 
 if os.path.exists(dst):
     mode = stat.S_IMODE(os.stat(dst).st_mode)
@@ -152,10 +151,7 @@ if not isinstance(deny, list):
     perms["deny"] = deny
 
 to_allow = ["command(*)"]
-if no_unsandboxed_all:
-    to_allow.extend(f"unsandboxed({cmd})" for cmd in unsandboxed_cmds)
-else:
-    to_allow.append("unsandboxed(*)")
+to_allow.extend(f"unsandboxed({cmd})" for cmd in unsandboxed_cmds)
 
 if not no_read_all:
     to_allow.append("read_file(*)")

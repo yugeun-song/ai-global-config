@@ -80,9 +80,10 @@ Gemini CLI, OpenCode, Cursor, Hermes Agent를 비롯한 모든 에이전트가 �
   그 위치를 사용자에게 알립니다. 사용자가 확인하면 지웁니다. 모델 제공사에 이미 보낸 내용은
   지울 수 없습니다. 이 사실을 사용자에게 그대로 말합니다.
 - **Rule SECRET-5.** 다른 에이전트의 설정·상태 파일을 절대 스스로 뒤지지 않습니다. 두 도구가 상위
-  디렉터리를 공유해도 마찬가지입니다. 사용자가 그 안의 파일을 경로로 지목해 확인해 달라고 하면
-  그 파일만 읽고, credential은 읽지 않습니다(Rule SECRET-1). 다른 에이전트에게 필요한
-  정보는 프로젝트 자체를 통해서만 공유합니다(Rule AGENT-6).
+  디렉터리를 공유해도 마찬가지입니다. 그 안의 파일은 사용자가 경로로 지목해 확인해 달라고 할
+  때만 읽거나, 사용자가 `ai-global-config`의 설치·갱신을 요청할 때 `INSTALL.md`에 적힌 규칙,
+  강제 장치, hook 파일만 다룹니다. 그때도 credential은 절대 읽거나 건드리지 않습니다(Rule
+  SECRET-1). 다른 에이전트에게 필요한 정보는 프로젝트 자체를 통해서만 공유합니다(Rule AGENT-6).
 
 ### ACTION: 지속 효과가 있는 행동
 
@@ -116,7 +117,7 @@ Gemini CLI, OpenCode, Cursor, Hermes Agent를 비롯한 모든 에이전트가 �
   씁니다. 도구가 붙이는 trailer가 없으면 저장소가 그 도구에 정해 둔 trailer를 쓰고, 그것도 없으면
   붙이지 않습니다. OpenCode에서는
   `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`를 씁니다.
-  Antigravity CLI에서는 `Assisted-by: Antigravity`를 씁니다. Google은 Antigravity에 대한 GitHub
+  Antigravity CLI에서는 `Assisted-by: Antigravity`를 씁니다. Google은 Antigravity의 GitHub
   계정이나 기여 주소를 공개하지 않으므로, 어떤 `Co-authored-by` 주소든 추측입니다.
   `antigravity@google.com`은 무관한 사람의 계정이므로 절대 쓰지 않고, 다른 Google 제품의 봇인
   `gemini-code-assist[bot]`도 쓰지 않습니다.

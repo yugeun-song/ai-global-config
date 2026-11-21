@@ -88,11 +88,12 @@ load the same text.
   after the user confirms. You cannot delete what you already sent to a model
   provider: tell the user so.
 - **Rule SECRET-5.** NEVER browse another agent's configuration or state files
-  on your own, even when two tools share a parent directory. When the user
-  names files there by path and asks you to check them, read only those
-  files, and never a credential (Rule SECRET-1). Share
-  information that other agents need only through the project itself (Rule
-  AGENT-6).
+  on your own, even when two tools share a parent directory. Read files there
+  only when the user names them by path and asks you to check them, or touch
+  only the rule, guard and hook files named in `INSTALL.md` when the user asks
+  you to install or update `ai-global-config`; never read or touch a credential
+  (Rule SECRET-1). Share information that other agents need only through the
+  project itself (Rule AGENT-6).
 
 ### ACTION: actions with lasting effect
 

@@ -71,7 +71,10 @@ installed copy of these rules.
    - Keep, word for word, only what holds on this machine alone: facts
      about its hardware, software, paths, network and local tools, and
      rules for those tools. When you cannot tell whether a passage is a
-     global rule or a note for this machine, keep it.
+     global rule or a note for this machine, keep it. When two tools share
+     an instruction file (such as `~/.gemini/GEMINI.md`, which both Gemini
+     CLI and Antigravity CLI load), keep the other tool's installed
+     `ai-global-config` import line or marker block.
    - Start the file with a short header that names the installed copy and
      says that the file holds only notes for this machine.
    - Report what you removed, what you kept and the path of the backup.
@@ -252,19 +255,25 @@ the user asks for the guard, or when an update finds an installed guard.
      `/usr/libexec/platform-python` and `python`, in this order. On
      Windows, OpenCode reads the system file from `%ProgramData%\opencode`,
      and the script does not set it up there.
-   - Antigravity CLI, permissions. agy keeps its agents from reading or
-     editing `~/.gemini/antigravity-cli/settings.json`. In its auto mode,
-     agy still asks before reads outside the workspace and before commands
-     that run outside its sandbox, which git commands must do because the
-     sandbox mounts `.git` read-only. `bash guards/agy-permissions.sh` backs
-     up that file, keeps its keys and rules, turns on auto mode and access
-     outside the workspace, and allows every command, unsandboxed command,
-     file read and file write, so that the guard is the only check left on
-     those calls. It also denies `command(rm -rf /)`. The options
-     `--no-write-all`, `--no-read-all`, `--dir DIR` and `--unsandboxed CMD`
-     narrow what it allows. The script needs bash and Python 3.6 or later,
-     and it finds Python as the OpenCode script does. On Windows, the user
-     runs it from Git Bash.
+   - Antigravity CLI, permissions. agy keeps its agents from editing
+     `~/.gemini/antigravity-cli/settings.json` directly. In its auto mode,
+     agy still asks before reads outside the workspace and before risky or
+     irreversible commands that run outside its sandbox.
+     `bash guards/agy-permissions.sh` backs up that file, keeps its keys
+     and rules, turns on auto mode and access outside the workspace, and
+     allows every command (`command(*)`, which covers both sandboxed and
+     unsandboxed commands on personal accounts), file read and file write,
+     so that the guard is the only check left on those calls. It also
+     denies `command(rm -rf /)`. The options `--no-write-all`,
+     `--no-read-all`, `--dir DIR` and `--unsandboxed CMD` adjust what it
+     allows; pass `--unsandboxed '*'` (or specific commands) only on
+     business and enterprise accounts, because personal accounts ignore
+     `unsandboxed` rules with a warning. Shell constructs that disable
+     prefix matching (such as `$(...)`, backticks, `<(...)` and `{a,b}`)
+     still ask unless covered by an exact or `regex:` rule or by
+     `toolPermission`. The script needs bash and Python 3.6 or later, and
+     it finds Python as the OpenCode script does. On Windows, the user runs
+     it from Git Bash.
 6. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
@@ -321,11 +330,13 @@ security boundary:
   `docker compose --env-file .env`. It skips message text that the shell
   passes on unchanged: a quoted string or a single-quoted PowerShell
   here-string given to `-m` or `--message` of `git commit`, `git tag`,
-  `git merge` or `git notes`; a heredoc with a quoted delimiter that one of
-  them reads through `-F -`, or through `cat` inside `-m "$(…)"`; such a
-  literal piped into `-F -`; and the title, body and notes options of
-  `gh pr`, `gh issue` and `gh release`. A message that contains command
-  substitution is still checked.
+  `git merge` or `git notes`, or to the title, body and notes options of
+  `gh pr`, `gh issue` and `gh release`; a heredoc with a quoted delimiter
+  that those commands read from standard input (`-F -`, `--body-file -`,
+  `--notes-file -`) or through `cat` inside `"$(…)"` on those text
+  options; and such a literal piped into those standard-input options. A
+  message that contains command substitution, or a file path given to `-F`,
+  `--body-file` or `--notes-file`, is still checked.
 - It also blocks a read that the user explicitly authorized under Rule
   SECRET-1, because it cannot tell whether the user did. The user does
   that step in a terminal outside the tool.
@@ -362,10 +373,11 @@ security boundary:
   tools such as web search do not pass the hook.
 - Antigravity CLI documents no behavior for a failing hook, so treat a
   failure as letting the call run. Its online documentation says that
-  `"allow"` hands the call to the next hook or the default policy, but the
-  documentation bundled with version 1.5.13 says that `"allow"` approves
-  the call. Under the second reading, the guard would skip the approval
-  prompts of agy.
+  `"allow"` hands the call to the next hook or the default policy (with
+  `"auto_approve"` approving when the default policy would prompt), but the
+  documentation bundled with version 1.5.14 still says that `"allow"`
+  approves the call. Under the second reading, the guard would skip the
+  approval prompts of agy.
 - Gemini CLI: `BeforeTool` hooks use millisecond `timeout` values (the
   fragment sets `10000` for 10 seconds), regex `matcher` (`".*"`), and
   support `"allow"` and `"deny"` decisions (no `"ask"` decision), so the
