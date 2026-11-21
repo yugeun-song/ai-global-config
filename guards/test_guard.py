@@ -95,8 +95,9 @@ def check_hook(tool):
 if len(sys.argv) == 3 and sys.argv[1] == "--hook" and sys.argv[2] in CONFIGS:
     sys.exit(check_hook(sys.argv[2]))
 guard = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "guard.py")
-with open(guard, "rb"):
-    pass
+with open(guard, encoding="utf-8") as source:
+    budget_line = re.search(r"^CHECK_SECONDS = ([0-9.]+)$", source.read(), re.M)
+time_budget = float(budget_line.group(1)) if budget_line else None
 
 
 def verdict(fmt, payload):
@@ -259,9 +260,10 @@ for fmt, event in slow:
     count += 1
     start = time.monotonic()
     verdict(fmt, json.dumps(event))
-    if time.monotonic() - start > 2:
+    took = time.monotonic() - start
+    if time_budget is None or took > time_budget:
         failures += 1
-        print(f"FAIL vector {count}: took {time.monotonic() - start:.1f} s")
+        print(f"FAIL vector {count}: took {took:.1f} s, the guard's time budget is {time_budget} s")
 
 oc_count, oc_bad = check_opencode_fragment()
 count += oc_count
