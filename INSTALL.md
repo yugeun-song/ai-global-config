@@ -107,8 +107,25 @@ If a sandbox or permission setting blocks a step, tell the user which
 setting blocked which step, and stop.
 
 To update, the user clones this repository again and sends the same line.
-Step 4 finds the older copy, step 6 replaces it, and step 7 removes older
-rules from the other instruction files.
+An update MUST leave no older copy of anything that this repository puts
+on the machine: an older copy keeps loading or running, and nothing
+reports it. The request to update covers every step below, so do not ask
+first.
+
+- Run steps 4 to 10 for every tool in the table below whose copy exists
+  on this machine, not only for your own tool. Step 4 finds the older
+  copy, step 6 replaces it, and step 7 removes older rules from the other
+  instruction files.
+- For every tool in the guard table whose guard is installed, run steps 3,
+  4, 6 and 7 of the guard install: replace the guard copy, bring the
+  guard's own hook entry to the current fragment, and test it. For
+  OpenCode, add the rules and policies of the fragment that the
+  configuration file lacks, in the order of the fragment.
+- Compare each setting that only the user can apply (step 5 of the guard
+  install) with the repository. Give the user the command for each one
+  that differs, and check it after the user has run it.
+- Report every location you checked, whether it was current, and what you
+  changed.
 
 | Tool | Method | Location of the copy |
 |---|---|---|
@@ -128,7 +145,7 @@ credential or that searches, copies or archives the whole home directory
 the guard or the hook settings, or turns hooks off. It works only through
 the pre-tool hook, or for OpenCode through its permission rules and
 policies, as the tool's official documentation describes. Start only when
-the user asks for the guard.
+the user asks for the guard, or when an update finds an installed guard.
 
 1. Find your tool in the table below. If it is not in the table, or its
    current documentation describes no pre-tool hook and no permission

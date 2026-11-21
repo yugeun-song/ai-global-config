@@ -51,7 +51,8 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
 에이전트는 규칙을 바이트 그대로 복사하고, 사본을 SHA-256으로 확인한 뒤 결과를 보고합니다.
 또 도구의 다른 지침 파일(`~/.claude/CLAUDE.md` 등)에서 예전 전역 규칙을 지우고, 그 파일에는
 그 기기의 메모만 남깁니다.
-갱신하려면 이 저장소를 다시 clone하고 같은 한 줄을 보냅니다. 도구별 위치는 `INSTALL.md`에
+갱신하려면 이 저장소를 다시 clone하고 같은 한 줄을 보냅니다. 갱신은 기기에서 규칙, 강제
+장치, 그 설정이 설치된 모든 도구를 최신 상태로 맞춥니다. 도구별 위치는 `INSTALL.md`에
 있습니다.
 
 | 도구 | 방식 | 위치 |
