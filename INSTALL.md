@@ -26,7 +26,7 @@ installed copy of these rules.
    before you rely on them.
 3. Move text only with a file copy command (`cp`, `Copy-Item` or your tool's
    file copy). NEVER retype, summarize or reformat the rules: a single
-   changed byte breaks the check in step 7.
+   changed byte breaks the check in step 8.
 4. Look for an installed copy: the file `ai-global-config.md` of method A or
    B, the text between the markers of method C, or the files
    `ai-global-config-*.md` of method D. If its SHA-256 equals
@@ -57,7 +57,16 @@ installed copy of these rules.
      a file in every session only with a header, write exactly that header
      first and then the part byte for byte. Remove installed parts that
      `rules/parts/` no longer has.
-7. Verify the result: the SHA-256 of the installed copy (methods A and B) or
+7. For Claude Code, offer to set `includeGitInstructions` to `false` in
+   `~/.claude/settings.json`. Claude Code then leaves out its built-in
+   commit and pull request workflow and its git status snapshot, so that
+   Rules ACTION-3, ACTION-4, OUTPUT-3 and OUTPUT-4 alone decide how the
+   agent commits. The agent then gets no git status when a session starts
+   and reads it itself when it needs it. Leave `attribution` unset: Claude
+   Code already puts user rules on attribution before its own lines. Show
+   the user the exact change and wait for approval. Keep every other key,
+   and restore the original file if the result does not parse as JSON.
+8. Verify the result: the SHA-256 of the installed copy (methods A and B) or
    of the text between the markers (method C) must equal the SHA-256 of
    `rules/global.md`. For method D, the SHA-256 of each installed file
    without its header must equal that of its part, and the parts joined in
@@ -65,10 +74,11 @@ installed copy of these rules.
    `sha256sum` on Linux, `shasum -a 256` on macOS, or `Get-FileHash
    -Algorithm SHA256` on Windows. For method B, also read back the import
    line and confirm that it names the copy, not this clone.
-8. Report to the user: the location, the method, both SHA-256 values, and,
-   for each rule group in Part 1 of `rules/global.md`, whether your tool's
-   own settings (deny rules, hooks, sandbox) enforce it or only the text
-   states it. Then tell the user that the clone can be deleted. Ask the user
+9. Report to the user: the location, the method, both SHA-256 values, the
+   result of step 7, and, for each rule group in Part 1 of
+   `rules/global.md`, whether your tool's own settings (deny rules, hooks,
+   sandbox) enforce it or only the text states it. Then tell the user that
+   the clone can be deleted. Ask the user
    to open a new session in a different directory and have the agent there
    quote Rule SECRET-1 exactly. The quote must match `rules/global.md` word
    for word; Markdown markup such as a list marker or bold may differ.

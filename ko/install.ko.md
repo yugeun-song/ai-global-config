@@ -26,7 +26,7 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
    자체의 도움말 출력)를 사용자에게 알립니다. 아래 표에 알려진 위치가 있습니다. 이 위치를 믿기
    전에 도구의 현재 문서와 대조합니다.
 3. 글은 파일 복사 명령(`cp`, `Copy-Item`, 또는 도구의 파일 복사 기능)으로만 옮깁니다. 규칙을
-   절대 다시 타이핑하거나, 요약하거나, 형식을 바꾸지 않습니다. 한 바이트만 달라져도 7단계의 확인이
+   절대 다시 타이핑하거나, 요약하거나, 형식을 바꾸지 않습니다. 한 바이트만 달라져도 8단계의 확인이
    실패합니다.
 4. 설치된 사본을 찾습니다. 방식 A나 B의 `ai-global-config.md` 파일, 방식 C의 표지 사이 글,
    방식 D의 `ai-global-config-*.md` 파일이 사본입니다. 사본의 SHA-256이 `rules/global.md`의 SHA-256과 같으면 아무것도 바꾸지 않고,
@@ -50,14 +50,21 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
      `ai-global-config-<조각 이름>`이라는 이름으로 그 디렉터리에 복사합니다. 도구가 머리글이
      있는 파일만 매 세션 읽는다면, 그 머리글을 그대로 먼저 쓰고 그 뒤에 조각을 바이트 그대로
      씁니다. `rules/parts/`에 더는 없는 조각은 설치 위치에서도 지웁니다.
-7. 결과를 확인합니다. 설치된 사본(방식 A와 B)이나 표지 사이의 글(방식 C)의 SHA-256이
+7. Claude Code라면 `~/.claude/settings.json`에서 `includeGitInstructions`를 `false`로 바꾸자고
+   제안합니다. 그러면 Claude Code가 내장 commit과 pull request 작업 지침, 그리고 git 상태
+   스냅숏을 넣지 않으므로, 에이전트가 commit하는 방식은 Rule ACTION-3, ACTION-4, OUTPUT-3,
+   OUTPUT-4만으로 정해집니다. 대신 에이전트는 세션이 시작될 때 git 상태를 받지 않고, 필요할 때
+   스스로 읽습니다. `attribution`은 설정하지 않고 둡니다. Claude Code는 이미 attribution을 다루는
+   사용자 규칙을 자기 문구보다 앞에 둡니다. 바꿀 내용을 정확히 보여 주고 승인을 기다립니다. 다른
+   키는 모두 그대로 두고, 결과가 JSON으로 해석되지 않으면 원래 파일로 되돌립니다.
+8. 결과를 확인합니다. 설치된 사본(방식 A와 B)이나 표지 사이의 글(방식 C)의 SHA-256이
    `rules/global.md`의 SHA-256과 같아야 합니다. 방식 D에서는 설치한 각 파일에서 머리글을 뺀
    나머지의 SHA-256이 해당 조각의 SHA-256과 같아야 하고, 조각을 이름 순서로 이어 붙인 결과가
    `rules/global.md`와 같아야 합니다. SHA-256은 Linux에서 `sha256sum`, macOS에서
    `shasum -a 256`, Windows에서 `Get-FileHash -Algorithm SHA256`으로 계산합니다. 방식 B에서는
    import 줄을 다시 읽어, 그 줄이 이 clone이 아니라 사본을 가리키는지도 확인합니다.
-8. 사용자에게 보고합니다. 보고 항목은 위치, 설치 방식, 두 SHA-256 값, 그리고 `rules/global.md`
-   1부의 규칙 그룹마다 도구 자체 설정(deny 규칙, hook, sandbox)으로 강제했는지 아니면 글로만
+9. 사용자에게 보고합니다. 보고 항목은 위치, 설치 방식, 두 SHA-256 값, 7단계의 결과, 그리고
+   `rules/global.md` 1부의 규칙 그룹마다 도구 자체 설정(deny 규칙, hook, sandbox)으로 강제했는지 아니면 글로만
    적혀 있는지입니다. 그다음 clone을 지워도 된다고 알립니다. 사용자에게, 다른 디렉터리에서 새
    세션을 열고 그 세션의 에이전트가 Rule SECRET-1을 그대로 인용하게 해 보라고 요청합니다.
    인용문은 `rules/global.md`와 낱말 단위로 같아야 합니다. 목록 기호나 굵은 글씨 같은 Markdown
