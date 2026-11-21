@@ -325,8 +325,15 @@ security boundary:
   instead of asking. If a `BeforeTool` hook times out, Gemini CLI fails
   open and lets the tool call run.
 - OpenCode permission rules match the whole command text, so they are
-  coarser than the hook. A rule loaded later (an agent's or a project's)
-  can allow a path again, because the last matching rule wins. The
+  coarser than the hook. OpenCode patterns know only `*` and `?`, so the
+  fragment lists each character that can stand before `.env` in a
+  command; a name that the shell builds at run time, such as `cat $v.env`
+  with a space in `v`, still gets past them. OpenCode ignores letter case
+  on Windows, and on macOS only in file rules. On macOS, whose default file
+  system ignores letter case, `cat .ENV` therefore reads `.env` without
+  matching a rule. The hook ignores letter case on every system. A rule
+  loaded later (an agent's or a project's) can allow a path again, because
+  the last matching rule wins. The
   fragment's policies close that gap: OpenCode evaluates policies from
   broader files last, a denying policy also overrides an "Allow always"
   approval, and an allowing policy only lifts an earlier deny. Policies
