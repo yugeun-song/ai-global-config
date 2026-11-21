@@ -21,7 +21,13 @@ text, because different tools load different file names.
   change its translation in the same commit. A difference between the two
   is a bug: fix the translation to match the source.
 - The user allows AI co-author trailers in commits to this repository (Rule
-  ACTION-4). Antigravity CLI documents no trailer of its own. It uses
-  `Co-Authored-By: Antigravity <noreply@google.com>` here. NEVER use
-  `antigravity@google.com`: that address belongs to an unrelated GitHub
-  account, which GitHub would then show as a contributor.
+  ACTION-4). Use the trailer that your tool adds by default. A tool that
+  adds none uses its entry below.
+  - Antigravity CLI: `Assisted-by: Antigravity`. Google publishes no
+    GitHub account and no attribution address for Antigravity, so any
+    `Co-authored-by` address would be a guess. NEVER use
+    `antigravity@google.com`, which an unrelated person's account owns, or
+    the bot of another Google product, such as `gemini-code-assist[bot]`.
+  - OpenCode: `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`.
+    This is the GitHub App of the OpenCode project, and GitHub shows it
+    with its avatar.

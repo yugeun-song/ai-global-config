@@ -35,6 +35,13 @@
     commit yourself. In this case, add the trailer.
   - The forge lists an AI account among the repository's contributors.
 
+  Use the trailer that your tool adds by default. When your tool adds none,
+  use the trailer that the repository names for your tool, and otherwise
+  add none. The forge credits a `Co-authored-by` trailer to whichever
+  account owns its address, so give it only an address that the tool's
+  maker publishes for that purpose. NEVER put a guessed address there, or
+  an address of another product or person. Name a tool without such an
+  address in an `Assisted-by:` trailer instead, which credits no account.
   Whether you add the trailer or leave it out, write nothing about this
   rule in the work itself (Rule OUTPUT-6).
 - **Rule ACTION-5.** NEVER put machine-specific values (hostnames, user paths,
