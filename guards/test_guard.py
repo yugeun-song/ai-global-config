@@ -31,37 +31,61 @@ def hook_commands(value):
             yield from hook_commands(item)
 
 
+def config_paths(tool):
+    paths = [os.path.expanduser(CONFIGS[tool])]
+    if tool != "claude":
+        return paths
+    if sys.platform == "win32":
+        managed = os.path.join(os.environ.get("ProgramW6432") or os.environ.get("ProgramFiles") or "C:\\Program Files", "ClaudeCode")
+    elif sys.platform == "darwin":
+        managed = "/Library/Application Support/ClaudeCode"
+    else:
+        managed = "/etc/claude-code"
+    drop_in = os.path.join(managed, "managed-settings.d")
+    try:
+        extra = sorted(os.path.join(drop_in, name) for name in os.listdir(drop_in) if name.endswith(".json"))
+    except OSError:
+        extra = []
+    return paths + [os.path.join(managed, "managed-settings.json")] + extra
+
+
 def check_hook(tool):
-    path = os.path.expanduser(CONFIGS[tool])
-    with open(path, encoding="utf-8") as config:
-        commands = list(dict.fromkeys(hook_commands(json.load(config))))
-    if not commands:
-        print(f"FAIL: {path} holds no ai-global-config guard hook")
-        return 1
+    total = 0
     failures = 0
-    for command in commands:
-        exec_form = isinstance(command, tuple)
-        for expect, event in zip(("deny", "allow"), PROBES[tool]):
-            result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, input=json.dumps(event).encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
-            out = result.stdout.decode("utf-8", errors="replace").strip()
-            if tool == "agy":
-                try:
-                    got = json.loads(out).get("decision")
-                except ValueError:
-                    got = f"bad output, exit {result.returncode}"
-                ok = result.returncode == 0 and got == expect
-            else:
-                err = result.stderr.decode("utf-8", errors="replace")
-                if result.returncode == 2 and ("Blocked by the ai-global-config guard" in err or "The ai-global-config guard protects" in err):
-                    got = "deny"
-                elif result.returncode == 0:
-                    got = "allow"
+    for path in config_paths(tool):
+        try:
+            with open(path, encoding="utf-8") as config:
+                commands = list(dict.fromkeys(hook_commands(json.load(config))))
+        except FileNotFoundError:
+            continue
+        for command in commands:
+            exec_form = isinstance(command, tuple)
+            for expect, event in zip(("deny", "allow"), PROBES[tool]):
+                result = subprocess.run(list(command) if exec_form else command, shell=not exec_form, input=json.dumps(event).encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+                out = result.stdout.decode("utf-8", errors="replace").strip()
+                if tool == "agy":
+                    try:
+                        got = json.loads(out).get("decision")
+                    except ValueError:
+                        got = f"bad output, exit {result.returncode}"
+                    ok = result.returncode == 0 and got == expect
                 else:
-                    got = f"exit {result.returncode}"
-                ok = got == expect
-            print(f"{'PASS' if ok else 'FAIL'} hook {expect} probe ({'exec' if exec_form else 'shell'} form): got {got}")
-            failures += not ok
-    print(f"{path}: {len(commands)} hook command(s), {failures} failed")
+                    err = result.stderr.decode("utf-8", errors="replace")
+                    if result.returncode == 2 and ("Blocked by the ai-global-config guard" in err or "The ai-global-config guard protects" in err):
+                        got = "deny"
+                    elif result.returncode == 0:
+                        got = "allow"
+                    else:
+                        got = f"exit {result.returncode}"
+                    ok = got == expect
+                print(f"{'PASS' if ok else 'FAIL'} hook {expect} probe ({'exec' if exec_form else 'shell'} form): got {got}")
+                failures += not ok
+        print(f"{path}: {len(commands)} hook command(s)")
+        total += len(commands)
+    if not total:
+        print(f"FAIL: no ai-global-config guard hook in {' or '.join(config_paths(tool))}")
+        return 1
+    print(f"{total} hook command(s), {failures} failed")
     return 1 if failures else 0
 
 

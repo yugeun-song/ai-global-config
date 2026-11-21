@@ -64,8 +64,9 @@ tool call that names a credential, through the hook or permission rules
 that the tool documents: hooks for Claude Code, Codex and agy, permission
 rules and policies for OpenCode. The hooks need Python 3.6 or later.
 `INSTALL.md` describes how to install the guard, and
-`python3 guards/test_guard.py` checks it. With root privileges,
-`guards/opencode-system-policy.sh` also copies the OpenCode policies into
+`python3 guards/test_guard.py` checks it. With administrator or root
+rights, the guard can also go into the managed settings of Claude Code,
+and `guards/opencode-system-policy.sh` copies the OpenCode policies into
 the system configuration.
 
 ## Maintenance

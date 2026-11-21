@@ -162,30 +162,62 @@ the user asks for the guard.
    holds other content, show the user the exact addition and wait for
    approval. Keep the original content, and restore it if the merged file
    does not parse as JSON (JSONC for OpenCode).
-5. For OpenCode, the fragment also holds policies. Once merged, they
-   already apply, and no project file can lift them, because OpenCode
-   evaluates policies from broader files last. An agent that runs as the
-   user can still edit the user's file. To keep the policies where such an
-   agent cannot change them, offer to copy them into the system file,
-   which only root can change. Give the user
-   `sudo bash guards/opencode-system-policy.sh` to run in a terminal
-   outside the tool, and wait until the user has run it. The script
-   supports Linux and macOS. It backs up the system file, keeps its
-   settings and policies, appends the missing policies, and validates the
-   result. It needs Python 3.6 or later and looks for it as `python3`,
-   `/usr/libexec/platform-python` and `python`, in this order. On Windows,
-   OpenCode reads the system file from `%ProgramData%\opencode`, and the
-   script does not set it up there.
+5. An agent that runs as the user can still edit the user's own files.
+   For Claude Code and OpenCode, offer to put the guard where only an
+   administrator or root can change it:
+   - Claude Code reads managed settings from
+     `C:\Program Files\ClaudeCode\managed-settings.json` on Windows,
+     `/Library/Application Support/ClaudeCode/managed-settings.json` on
+     macOS and `/etc/claude-code/managed-settings.json` on Linux. Its hooks
+     stay on when any other settings file sets `disableAllHooks`. Copy the
+     guard to `hooks/ai-global-config-guard.py` in that directory, replace
+     the guard path in the fragment with the path of that copy, and merge
+     the fragment into `managed-settings.json` as in step 4. Writing there
+     needs administrator or root rights: give the user the commands for a
+     terminal outside the tool, or start them through the system's own
+     elevation prompt after the user approves. Before you write the
+     managed file, run the exact hook command with
+     `{"tool_name":"Bash","tool_input":{"command":"ls"}}` on standard input,
+     and confirm that it exits with 0: a managed entry that fails blocks
+     every tool call until an administrator fixes it. Then remove the
+     user's entry and its guard copy, so that the guard runs once per tool
+     call. A plain command name is looked up in the `PATH` that Claude Code
+     inherits, and the user's own account can change that `PATH`. An
+     absolute path to an interpreter in a directory that only
+     administrators can change closes that gap, but the hook breaks when
+     that interpreter moves. Tell the user both, and let the user choose.
+     If remote settings or an MDM policy (a macOS configuration profile,
+     or a value in the Windows `HKLM` registry) already set managed
+     settings, Claude Code may skip this file. On WSL, the user can write
+     `/etc/claude-code` too.
+   - For OpenCode, the fragment also holds policies. Once merged, they
+     already apply, and no project file can lift them, because OpenCode
+     evaluates policies from broader files last. To keep them where an
+     agent cannot change them, offer to copy them into the system file,
+     which only root can change. Give the user
+     `sudo bash guards/opencode-system-policy.sh` to run in a terminal
+     outside the tool, and wait until the user has run it. The script
+     supports Linux and macOS. It backs up the system file, keeps its
+     settings and policies, appends the missing policies, and validates
+     the result. It needs Python 3.6 or later and looks for it as
+     `python3`, `/usr/libexec/platform-python` and `python`, in this
+     order. On Windows, OpenCode reads the system file from
+     `%ProgramData%\opencode`, and the script does not set it up there.
 6. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
    - `python3 guards/test_guard.py --hook <claude|codex|agy>` reports no
      failure. It runs every guard command that the configuration file
-     holds, exactly as written: an exec-form entry directly, and a
-     shell-form entry through the system shell. It feeds one input that
-     must be blocked and one that must be allowed. No credential is
-     opened. If your tool runs a shell-form hook through a different shell
-     (for example PowerShell on Windows), also run the command there.
+     holds (for Claude Code, also the managed settings), exactly as
+     written: an exec-form entry directly, and a shell-form entry through
+     the system shell. It feeds one input that must be blocked and one
+     that must be allowed. No credential is opened. If your tool runs a
+     shell-form hook through a different shell (for example PowerShell on
+     Windows), also run the command there.
+   - For a Claude Code entry in managed settings, run a command in a
+     session that names a credential file that does not exist, such as
+     `cat agc-decoy/.netrc`. The guard must block it, and the block
+     message must name the guard copy in the managed settings directory.
    - For OpenCode, read the merged file back and confirm that it holds
      every rule and every policy of the fragment. Read the system file
      back the same way if the user ran the script. In a new OpenCode
@@ -196,7 +228,7 @@ the user asks for the guard.
 
 | Tool | Guard location | Configuration file | Fragment |
 |---|---|---|---|
-| Claude Code | `~/.claude/hooks/ai-global-config-guard.py` | `~/.claude/settings.json` | `guards/claude-settings.json` |
+| Claude Code | `~/.claude/hooks/ai-global-config-guard.py`, or `hooks/ai-global-config-guard.py` in the managed settings directory | `~/.claude/settings.json`, or `managed-settings.json` | `guards/claude-settings.json` |
 | Codex CLI | `~/.codex/hooks/ai-global-config-guard.py` | `~/.codex/hooks.json` | `guards/codex-hooks.json` |
 | Antigravity CLI (agy) | `~/.gemini/config/hooks/ai-global-config-guard.py` | `~/.gemini/config/hooks.json` | `guards/agy-hooks.json` |
 | OpenCode | none: permission rules and policies | `~/.config/opencode/opencode.jsonc`; with root, also the system file | `guards/opencode-permissions.json` |
@@ -233,19 +265,24 @@ security boundary:
   seconds, it blocks the call and asks the agent to split it. When it
   cannot parse the call, it decides from the raw text and blocks when in
   doubt.
-- Claude Code: `disableAllHooks` or a `--settings` override turns the
-  guard off. The guard asks before a tool call that names
+- Claude Code: `disableAllHooks` in any settings file other than managed
+  settings, including a file passed with `--settings`, turns off a guard
+  in the user's settings. The guard asks before a tool call that names
   `disableAllHooks`, but a cloned repository can already hold it in its
   `.claude/settings.json`, which overrides the user's settings in that
-  project. Only hooks in managed settings stay on there. With
-  `onFailure: "block"`, a deleted or broken guard script or a removed
+  project. A guard in managed settings stays on in both cases (step 5).
+  With `onFailure: "block"`, a deleted or broken guard script or a removed
   interpreter blocks every tool call until the user fixes or removes the
-  hook entry by hand.
+  hook entry by hand; a managed entry needs administrator or root rights
+  for that.
 - The guard does not protect its interpreter. A hook that names a command
   starts the first interpreter that the name finds on `PATH`. When the
   user's own account can change that interpreter's files (for example in
   a per-user install under `AppData` on Windows) or the `PATH` that the
-  tool inherits, an agent can turn the guard off through them.
+  tool inherits, an agent can turn the guard off through them. The user's
+  own account can always change the user part of `PATH` on Windows and
+  the shell's startup files on every system, so only an absolute path
+  avoids this lookup.
 - Codex has no "ask" decision, so the guard blocks a change to its own
   files instead of asking. Codex may run a tool when its hook fails, times
   out or answers in a wrong format. Input sent later to a running terminal

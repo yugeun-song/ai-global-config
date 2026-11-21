@@ -135,25 +135,49 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
    추가합니다. 기존 항목은 절대 지우거나 바꾸지 않습니다. 파일에 이미 다른 내용이 있으면, 추가할
    내용을 정확히 보여 주고 승인을 기다립니다. 원래 내용을 보관해 두고, 합친 파일이
    JSON(OpenCode는 JSONC)으로 해석되지 않으면 원래 내용으로 되돌립니다.
-5. OpenCode의 설정 조각에는 정책(policies)도 들어 있습니다. 조각을 합치면 정책이 바로 적용되고,
-   어떤 프로젝트 파일도 그 정책을 풀 수 없습니다. OpenCode는 넓은 범위의 파일에 든 정책을 나중에
-   평가하기 때문입니다. 그래도 사용자 권한으로 도는 에이전트는 사용자의 설정 파일을 고칠 수
-   있습니다. 그런 에이전트가 정책을 바꿀 수 없게 하려면, root만 바꿀 수 있는 시스템 파일에도
-   정책을 복사하자고 제안합니다. 도구 밖 터미널에서 실행할
-   `sudo bash guards/opencode-system-policy.sh`를 사용자에게 주고, 사용자가 실행할 때까지
-   기다립니다. 이 스크립트는 Linux와 macOS를 지원합니다. 스크립트는 시스템 파일을 백업하고, 그
-   설정과 정책을 유지하면서 빠진 정책을 덧붙이고, 결과를 검증합니다. 이 스크립트에는 Python 3.6
-   이상이 필요하고, 스크립트는 `python3`, `/usr/libexec/platform-python`, `python` 순서로 그
-   인터프리터를 찾습니다. Windows에서 OpenCode는 `%ProgramData%\opencode`에서 시스템 파일을
-   읽지만, 이 스크립트는 그곳을 설정하지 않습니다.
+5. 사용자 권한으로 도는 에이전트는 여전히 사용자 자신의 파일을 고칠 수 있습니다. Claude Code와
+   OpenCode에서는 관리자나 root만 바꿀 수 있는 곳에 강제 장치를 두자고 제안합니다.
+   - Claude Code는 managed settings를 Windows에서는
+     `C:\Program Files\ClaudeCode\managed-settings.json`, macOS에서는
+     `/Library/Application Support/ClaudeCode/managed-settings.json`, Linux에서는
+     `/etc/claude-code/managed-settings.json`에서 읽습니다. 다른 설정 파일에 `disableAllHooks`가
+     들어 있어도 managed settings의 hook은 켜져 있습니다. 판정기를 그 디렉터리의
+     `hooks/ai-global-config-guard.py`로 복사하고, 설정 조각의 판정기 경로를 그 사본의 경로로
+     바꾼 뒤, 4단계처럼 조각을 `managed-settings.json`에 합칩니다. 그곳에 쓰려면 관리자나 root
+     권한이 필요합니다. 도구 밖 터미널에서 실행할 명령을 사용자에게 주거나, 사용자가 승인한 뒤
+     시스템 자체의 권한 상승 확인 창을 거쳐 실행합니다. managed 파일을 쓰기 전에, 표준 입력으로
+     `{"tool_name":"Bash","tool_input":{"command":"ls"}}`를 넣어 hook 명령을 그대로 실행하고,
+     종료 코드가 0인지 확인합니다. managed 항목이 실패하면, 관리자가 고칠 때까지 모든 도구
+     호출이 막히기 때문입니다. 그다음 사용자 설정의 항목과 그 판정기 사본을 지워, 도구 호출마다
+     강제 장치가 한 번만 돌게 합니다. 일반 명령 이름은 Claude Code가 물려받는 `PATH`에서 찾는데,
+     사용자 자신의 계정이 그 `PATH`를 바꿀 수 있습니다. 관리자만 바꿀 수 있는 디렉터리에 있는
+     인터프리터의 절대 경로를 쓰면 이 빈틈이 닫히지만, 그 인터프리터가 옮겨지면 hook이 깨집니다.
+     두 가지를 모두 사용자에게 알리고, 사용자가 고르게 합니다. 원격 설정이나 MDM 정책(macOS 구성
+     프로필, 또는 Windows `HKLM` 레지스트리의 값)으로 managed settings가 이미 정해져 있으면,
+     Claude Code가 이 파일을 건너뛸 수 있습니다. WSL에서는 사용자도 `/etc/claude-code`에 쓸 수
+     있습니다.
+   - OpenCode의 설정 조각에는 정책(policies)도 들어 있습니다. 조각을 합치면 정책이 바로
+     적용되고, 어떤 프로젝트 파일도 그 정책을 풀 수 없습니다. OpenCode는 넓은 범위의 파일에 든
+     정책을 나중에 평가하기 때문입니다. 에이전트가 정책을 바꿀 수 없게 하려면, root만 바꿀 수
+     있는 시스템 파일에도 정책을 복사하자고 제안합니다. 도구 밖 터미널에서 실행할
+     `sudo bash guards/opencode-system-policy.sh`를 사용자에게 주고, 사용자가 실행할 때까지
+     기다립니다. 이 스크립트는 Linux와 macOS를 지원합니다. 스크립트는 시스템 파일을 백업하고, 그
+     설정과 정책을 유지하면서 빠진 정책을 덧붙이고, 결과를 검증합니다. 이 스크립트에는 Python
+     3.6 이상이 필요하고, 스크립트는 `python3`, `/usr/libexec/platform-python`, `python` 순서로
+     그 인터프리터를 찾습니다. Windows에서 OpenCode는 `%ProgramData%\opencode`에서 시스템
+     파일을 읽지만, 이 스크립트는 그곳을 설정하지 않습니다.
 6. 강제 장치를 확인합니다.
    - `python3 guards/test_guard.py <설치한 판정기>`가 실패 없이 끝납니다.
    - 설치한 판정기의 SHA-256이 `guards/guard.py`의 SHA-256과 같습니다.
    - `python3 guards/test_guard.py --hook <claude|codex|agy>`가 실패 없이 끝납니다. 이 명령은
-     설정 파일에 들어 있는 강제 장치 명령을 쓰인 그대로 모두 실행합니다. exec form 항목은 바로
-     실행하고, shell form 항목은 시스템 shell로 실행합니다. 막혀야 하는 입력 하나와 허용되어야
-     하는 입력 하나를 넣습니다. credential은 열지 않습니다. 도구가 shell form hook을 다른
-     shell(예: Windows의 PowerShell)로 실행하면, 그 shell에서도 명령을 실행합니다.
+     설정 파일(Claude Code는 managed settings도)에 들어 있는 강제 장치 명령을 쓰인 그대로 모두
+     실행합니다. exec form 항목은 바로 실행하고, shell form 항목은 시스템 shell로 실행합니다.
+     막혀야 하는 입력 하나와 허용되어야 하는 입력 하나를 넣습니다. credential은 열지 않습니다.
+     도구가 shell form hook을 다른 shell(예: Windows의 PowerShell)로 실행하면, 그 shell에서도
+     명령을 실행합니다.
+   - Claude Code의 managed settings 항목은, 없는 credential 파일을 지목하는 명령(예:
+     `cat agc-decoy/.netrc`)을 세션에서 실행해 확인합니다. 강제 장치가 그 명령을 막아야 하고,
+     차단 메시지에 managed settings 디렉터리의 판정기 사본이 나와야 합니다.
    - OpenCode는 합친 파일을 다시 읽어 조각의 규칙과 정책이 모두 들어 있는지 확인합니다. 사용자가
      스크립트를 실행했다면 시스템 파일도 같은 방법으로 확인합니다. 새 OpenCode 세션에서
      credential을 지목한 도구 호출이 거부되는지 확인합니다.
@@ -162,7 +186,7 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
 
 | 도구 | 판정기 위치 | 설정 파일 | 설정 조각 |
 |---|---|---|---|
-| Claude Code | `~/.claude/hooks/ai-global-config-guard.py` | `~/.claude/settings.json` | `guards/claude-settings.json` |
+| Claude Code | `~/.claude/hooks/ai-global-config-guard.py`, 또는 managed settings 디렉터리의 `hooks/ai-global-config-guard.py` | `~/.claude/settings.json`, 또는 `managed-settings.json` | `guards/claude-settings.json` |
 | Codex CLI | `~/.codex/hooks/ai-global-config-guard.py` | `~/.codex/hooks.json` | `guards/codex-hooks.json` |
 | Antigravity CLI (agy) | `~/.gemini/config/hooks/ai-global-config-guard.py` | `~/.gemini/config/hooks.json` | `guards/agy-hooks.json` |
 | OpenCode | 없음: 권한 규칙과 정책 | `~/.config/opencode/opencode.jsonc`, root로는 시스템 파일도 | `guards/opencode-permissions.json` |
@@ -191,16 +215,20 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
 - 호출에 든 낱말이나 경로가 약 4초 안에 확인할 수 있는 양보다 많으면, 그 호출을 막고
   에이전트에게 호출을 나누라고 알립니다. 호출을 해석하지 못하면, 원문 글로 판정하고 애매하면
   막습니다.
-- Claude Code: `disableAllHooks`나 `--settings` 덮어쓰기는 강제 장치를 끕니다. 강제 장치는
+- Claude Code: managed settings가 아닌 설정 파일(`--settings`로 넘긴 파일 포함)에
+  `disableAllHooks`가 있으면, 사용자 설정에 둔 강제 장치가 꺼집니다. 강제 장치는
   `disableAllHooks`를 담은 도구 호출 앞에서 묻지만, clone한 저장소의 `.claude/settings.json`에
   그 값이 이미 들어 있을 수 있습니다. 그 파일은 그 프로젝트에서 사용자 설정보다 우선합니다.
-  그곳에서도 켜져 있는 hook은 managed settings의 hook뿐입니다. `onFailure: "block"` 때문에,
-  판정기 스크립트가 지워지거나 망가지거나 인터프리터가 지워지면, 사용자가 hook 항목을 직접
-  고치거나 지울 때까지 모든 도구 호출이 막힙니다.
+  managed settings에 둔 강제 장치는 두 경우 모두 켜져 있습니다(5단계). `onFailure: "block"`
+  때문에, 판정기 스크립트가 지워지거나 망가지거나 인터프리터가 지워지면, 사용자가 hook 항목을
+  직접 고치거나 지울 때까지 모든 도구 호출이 막힙니다. managed 항목을 그렇게 고치려면 관리자나
+  root 권한이 필요합니다.
 - 강제 장치는 자기 인터프리터를 보호하지 않습니다. 명령 이름을 쓰는 hook은 그 이름이 `PATH`에서
   처음 찾은 인터프리터를 실행합니다. 사용자 자신의 계정이 그 인터프리터 파일(예: Windows의
   `AppData` 아래에 사용자별로 설치한 경우)이나 도구가 물려받는 `PATH`를 바꿀 수 있으면,
-  에이전트가 그 파일이나 `PATH`를 바꿔 강제 장치를 끌 수 있습니다.
+  에이전트가 그 파일이나 `PATH`를 바꿔 강제 장치를 끌 수 있습니다. 사용자 자신의 계정은
+  Windows에서 `PATH`의 사용자 부분을, 모든 시스템에서 shell 시작 파일을 언제나 바꿀 수 있으므로,
+  이 탐색을 피하는 방법은 절대 경로뿐입니다.
 - Codex에는 "묻기" 결정이 없어서, 강제 장치는 자기 파일을 바꾸는 호출을 묻는 대신 막습니다.
   Codex는 hook이 실패하거나, 시간 초과되거나, 잘못된 형식으로 답하면 도구를 그대로 실행할 수
   있습니다. 실행 중인 터미널에 나중에 보내는 입력(`write_stdin`)은 hook을 다시 거치지 않습니다.
