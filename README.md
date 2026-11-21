@@ -30,7 +30,7 @@ keep working after the clone is deleted.
 | `rules/parts/` | the same rules cut into one file per section, for tools that cap the size of a rule file |
 | `INSTALL.md` | how an agent installs or updates the rules |
 | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | short pointers for agents that work in this repository |
-| `guards/` | the optional guard: one Python 3 script and a configuration fragment per tool, plus an OpenCode system-policy script |
+| `guards/` | the optional guard: one Python 3 script and a configuration fragment per tool, plus helper scripts for OpenCode system policy and agy permissions |
 | `tests/` | test cases and their runner |
 | `ko/` | Korean translations with the same content, for Korean readers |
 
