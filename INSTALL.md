@@ -26,17 +26,17 @@ installed copy of these rules.
    before you rely on them.
 3. Move text only with a file copy command (`cp`, `Copy-Item` or your tool's
    file copy). NEVER retype, summarize or reformat the rules: a single
-   changed byte breaks the check in step 8.
+   changed byte breaks the check in step 9.
 4. Look for an installed copy: the file `ai-global-config.md` of method A or
    B, the text between the markers of method C, or the files
    `ai-global-config-*.md` of method D. If its SHA-256 equals
-   that of `rules/global.md`, change nothing, report that, and stop. If it
-   differs, it is an older version: summarize the difference for the user,
-   then replace it whole in step 6.
+   that of `rules/global.md`, leave the copy as it is, report that, and
+   continue with step 7. If it differs, it is an older version: summarize
+   the difference for the user, then replace it whole in step 6.
 5. Method B or C adds a line or a block to a file. If that file holds other
    content, add only the import line or the marked block, and show the
-   exact addition in your report. NEVER change content outside the import
-   line or the markers.
+   exact addition in your report. Outside the import line or the markers,
+   change only what step 7 removes.
 6. Install with the first method your tool supports:
    - Method A, rules directory: copy `rules/global.md` byte for byte to
      `ai-global-config.md` in the directory from which your tool loads every
@@ -57,7 +57,27 @@ installed copy of these rules.
      a file in every session only with a header, write exactly that header
      first and then the part byte for byte. Remove installed parts that
      `rules/parts/` no longer has.
-7. For Claude Code, set `includeGitInstructions` to `false` in
+7. Remove older global rules from every other instruction file that your
+   tool loads in every session and every directory, such as
+   `~/.claude/CLAUDE.md` for Claude Code, and from the content outside the
+   import line or the markers of method B or C. Rules that an earlier
+   version or the user put there would otherwise load beside the installed
+   copy and contradict it. The request to install or update covers this
+   step, so do not ask first.
+   - Before you change a file, copy it to a backup in your tool's
+     configuration directory.
+   - Remove every rule and note that `rules/global.md` already covers or
+     contradicts.
+   - Keep, word for word, only what holds on this machine alone: facts
+     about its hardware, software, paths, network and local tools, and
+     rules for those tools. When you cannot tell whether a passage is a
+     global rule or a note for this machine, keep it.
+   - Start the file with a short header that names the installed copy and
+     says that the file holds only notes for this machine.
+   - Report what you removed, what you kept and the path of the backup.
+     List the removed passages that `rules/global.md` does not hold, so
+     that the user can add them to this repository.
+8. For Claude Code, set `includeGitInstructions` to `false` in
    `~/.claude/settings.json`. Claude Code then leaves out its built-in
    commit and pull request workflow and its git status snapshot, so that
    Rules ACTION-3, ACTION-4, OUTPUT-3 and OUTPUT-4 alone decide how the
@@ -66,7 +86,7 @@ installed copy of these rules.
    Code already puts user rules on attribution before its own lines. Keep
    every other key, restore the original file if the result does not parse
    as JSON, and show the exact change in your report.
-8. Verify the result: the SHA-256 of the installed copy (methods A and B) or
+9. Verify the result: the SHA-256 of the installed copy (methods A and B) or
    of the text between the markers (method C) must equal the SHA-256 of
    `rules/global.md`. For method D, the SHA-256 of each installed file
    without its header must equal that of its part, and the parts joined in
@@ -74,20 +94,21 @@ installed copy of these rules.
    `sha256sum` on Linux, `shasum -a 256` on macOS, or `Get-FileHash
    -Algorithm SHA256` on Windows. For method B, also read back the import
    line and confirm that it names the copy, not this clone.
-9. Report to the user: the location, the method, both SHA-256 values, the
-   result of step 7, and, for each rule group in Part 1 of
-   `rules/global.md`, whether your tool's own settings (deny rules, hooks,
-   sandbox) enforce it or only the text states it. Then tell the user that
-   the clone can be deleted. Ask the user
-   to open a new session in a different directory and have the agent there
-   quote Rule SECRET-1 exactly. The quote must match `rules/global.md` word
-   for word; Markdown markup such as a list marker or bold may differ.
+10. Report to the user: the location, the method, both SHA-256 values, the
+    results of steps 7 and 8, and, for each rule group in Part 1 of
+    `rules/global.md`, whether your tool's own settings (deny rules, hooks,
+    sandbox) enforce it or only the text states it. Then tell the user that
+    the clone can be deleted. Ask the user
+    to open a new session in a different directory and have the agent there
+    quote Rule SECRET-1 exactly. The quote must match `rules/global.md` word
+    for word; Markdown markup such as a list marker or bold may differ.
 
 If a sandbox or permission setting blocks a step, tell the user which
 setting blocked which step, and stop.
 
 To update, the user clones this repository again and sends the same line.
-Step 4 finds the older copy, and step 6 replaces it.
+Step 4 finds the older copy, step 6 replaces it, and step 7 removes older
+rules from the other instruction files.
 
 | Tool | Method | Location of the copy |
 |---|---|---|

@@ -52,7 +52,9 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
 ```
 
 The agent copies the rules byte for byte, checks the copy by SHA-256 and
-reports the result. To update, clone this repository again and send the
+reports the result. It also removes older global rules from the tool's
+other instruction files, such as `~/.claude/CLAUDE.md`, and keeps there
+only notes for that machine. To update, clone this repository again and send the
 same line. `INSTALL.md` lists the location for each tool:
 
 | Tool | Method | Location |
