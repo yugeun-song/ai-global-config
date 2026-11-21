@@ -186,3 +186,7 @@
 {"format":"claude","expect":"allow","input":{"tool_name":"PowerShell","tool_input":{"command":"Get-ChildItem -Recurse -Filter *.ps1 tests; Get-FileHash (Join-Path $env:USERPROFILE '.claude\\rules\\x.md')"},"cwd":"~"}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"cp -r ~/.aws/* /tmp/x"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"PowerShell","tool_input":{"command":"Compress-Archive -Path \"$HOME\\.aws\\*\" -DestinationPath x.zip"}}}
+{"format":"claude","expect":"allow","input":{"tool_name":"Bash","tool_input":{"command":"curl -sSL -o py.zip https://www.python.org/ftp/python/3.6.8/python-3.6.8-embed-amd64.zip && gpg --verify py.zip.asc py.zip 2>&1 | sed -n 's/.*Good signature from \"\\([^\"<]*\\).*/\\1/p'"}}}
+{"format":"claude","expect":"allow","input":{"tool_name":"PowerShell","tool_input":{"command":"Expand-Archive python.zip -DestinationPath C:\\work\\py; Get-ChildItem C:\\work\\py"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"tar czf x.tgz ~;"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"zip -r out.zip ~"}}}

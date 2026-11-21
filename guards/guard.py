@@ -44,7 +44,7 @@ SECRET_DIR_NAME = re.compile(
     re.IGNORECASE,
 )
 SWEEPING = re.compile(
-    r"\b(?:grep|egrep|fgrep)\s+(?:-\w*\s+)*-\w*[rR]|\brg\b|\bag\b|\back\b|\btar\b|\bzip\b|\b7z\b"
+    r"\b(?:grep|egrep|fgrep)\s+(?:-\w*\s+)*-\w*[rR]|\brg\b|\bag\b|\back\b|(?<![.\w-])(?:tar|zip|7z)\b"
     r"|\brsync\b|\bcp\s+(?:-\w*\s+)*-\w*[rRa]|\bfind\b|\bcpio\b|\bscp\b"
     r"|\b(?:Copy-Item|cpi|copy|cp|Get-ChildItem|gci)\b[^;&|\n]{0,200}?\s-r\w*"
     r"|\bCompress-Archive\b|\brobocopy\b|\bxcopy\b|\bSelect-String\b|\bsls\b|\bfindstr\b"
@@ -52,7 +52,7 @@ SWEEPING = re.compile(
     re.IGNORECASE,
 )
 HOME_SWEEPING = re.compile(
-    r"\b(?:grep|egrep|fgrep)\s+(?:-\w*\s+)*-\w*[rR]|\brg\b|\bag\b|\back\b|\btar\b|\bzip\b|\b7z\b"
+    r"\b(?:grep|egrep|fgrep)\s+(?:-\w*\s+)*-\w*[rR]|\brg\b|\bag\b|\back\b|(?<![.\w-])(?:tar|zip|7z)\b"
     r"|\brsync\b|\bcp\s+(?:-\w*\s+)*-\w*[rRa]|\bcpio\b|\bscp\b"
     r"|\b(?:Copy-Item|cpi|copy|cp)\b[^;&|\n]{0,200}?\s-r\w*"
     r"|\bCompress-Archive\b|\brobocopy\b|\bxcopy\b|\bSelect-String\b|\bsls\b|\bfindstr\b"
@@ -321,17 +321,17 @@ def patch_targets(args):
 
 def command_words(command):
     slashed = command.replace("\\", "/")
-    whole = tokens(command) + (tokens(slashed) if slashed != command else [])
-    whole = list(dict.fromkeys(w for w in whole + WORD_BREAK.split(ESCAPES.sub(" ", slashed))[:2000] if w))
+    shell = tokens(command) + (tokens(slashed) if slashed != command else [])
+    whole = list(dict.fromkeys(w for w in shell + WORD_BREAK.split(ESCAPES.sub(" ", slashed))[:2000] if w))
     pieces = ESCAPES.sub(" ", command).split()[:2000]
-    return list(dict.fromkeys(whole + pieces)), whole
+    return list(dict.fromkeys(whole + pieces)), whole, shell
 
 
 def check_command(command, bases):
     if not command:
         return "allow"
     command = DIRENV.sub("direnv", command)
-    words, whole = command_words(command)
+    words, whole, shell = command_words(command)
     cd_words = [m.strip("\"'") for m in CD.findall(command)]
     cd_bases = [expand(m) for m in cd_words]
     all_bases = list(dict.fromkeys(list(bases) + cd_bases))
@@ -359,7 +359,8 @@ def check_command(command, bases):
     if HOME_SWEEPING.search(command):
         skip = {form for word in cd_words for form in (word, word.replace("\\", "/"))}
         home_bases = with_real(cd_bases[:MAX_BASES]) if cd_bases else list(bases)
-        if any(word and word not in skip and covers_home(path_forms(word, home_bases)) for word in whole):
+        home_words = dict.fromkeys(word.strip(";&|()") for word in shell)
+        if any(word and word not in skip and covers_home(path_forms(word, home_bases)) for word in home_words):
             return "home"
     if names_protected(forms) and not READ_ONLY_COMMAND.match(command):
         return "ask"
