@@ -250,8 +250,9 @@ hook 설정을 바꾸거나 hook을 끄는 호출 앞에서는 도구가 사용�
   넘긴다고 적지만, 1.5.13 버전에 들어 있는 문서는 `"allow"`가 호출을 승인한다고 적습니다. 두
   번째 해석이 맞다면, 강제 장치 때문에 agy의 승인 확인이 생략됩니다. Antigravity CLI는
   에이전트가 `~/.gemini/antigravity-cli/settings.json`을 직접 읽거나 고치지 못하게 막으므로,
-  `PreToolUse` credential 가드를 유지하면서 일상 명령과 워크스페이스 바깥 읽기의 반복 확인 창을
-  줄이려면 사용자가 도구 밖 터미널에서 `bash guards/agy-permissions.sh`를 실행하면 됩니다.
+  `PreToolUse` credential 가드를 유지하면서 일상 명령과 워크스페이스 바깥
+  읽기·쓰기의 반복 확인 창을 줄이려면 사용자가 도구 밖 터미널에서
+  `bash guards/agy-permissions.sh`를 실행하면 됩니다.
 - Gemini CLI: `BeforeTool` hook은 밀리초 단위 `timeout`(설정 조각은 10초에
   해당하는 `10000`을 씀)과 정규식 `matcher`(`".*"`)를 쓰며, `"allow"`와
   `"deny"` 결정만 지원합니다(`"ask"` 결정이 없음). 그래서 강제 장치는 자기

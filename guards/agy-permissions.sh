@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DST=""
-WRITE_ALL=0
+WRITE_ALL=1
 NO_READ_ALL=0
 NO_UNSANDBOXED_ALL=0
 DIRS=()
@@ -14,13 +14,14 @@ Usage: agy-permissions.sh [options]
 
 Merge autonomous permission allow rules into the Antigravity CLI (agy)
 settings file (~/.gemini/antigravity-cli/settings.json) so routine commands
-and file reads do not trigger repeated yes/no prompts while the PreToolUse
-credential guard continues blocking secrets.
+and file reads/writes do not trigger repeated yes/no prompts while the
+PreToolUse credential guard continues blocking secrets.
 
   --dst FILE             Destination settings file
                          (default: $HOME/.gemini/antigravity-cli/settings.json).
   --dir DIR              Allow read_file and write_file on DIR (repeatable).
-  --write-all            Also add write_file(*) to permissions.allow.
+  --write-all            Add write_file(*) to permissions.allow (default).
+  --no-write-all         Do not add write_file(*) to permissions.allow.
   --no-read-all          Do not add read_file(*) to permissions.allow.
   --unsandboxed CMD      Add unsandboxed(CMD) instead of unsandboxed(*) (repeatable).
   -h, --help             Show this help.
@@ -53,6 +54,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --write-all)
       WRITE_ALL=1
+      shift
+      ;;
+    --no-write-all)
+      WRITE_ALL=0
       shift
       ;;
     --no-read-all)

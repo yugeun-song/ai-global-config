@@ -311,8 +311,8 @@ security boundary:
   the call. Under the second reading, the guard would skip the approval
   prompts of agy. Antigravity CLI blocks agents from reading or editing
   `~/.gemini/antigravity-cli/settings.json` directly; to reduce repeated
-  prompts on routine commands and non-workspace reads while keeping the
-  `PreToolUse` credential guard active, the user can run
+  prompts on routine commands and non-workspace reads and writes while
+  keeping the `PreToolUse` credential guard active, the user can run
   `bash guards/agy-permissions.sh` in a terminal outside the tool.
 - Gemini CLI: `BeforeTool` hooks use millisecond `timeout` values (the
   fragment sets `10000` for 10 seconds), regex `matcher` (`".*"`), and
