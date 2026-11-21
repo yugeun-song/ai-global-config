@@ -60,10 +60,9 @@ Read <absolute path of this clone>/INSTALL.md and install the rules as it descri
 
 규칙은 글입니다. `guards/`의 선택 사항인 강제 장치는 credential을 지목하는 도구 호출을 도구가
 거부하게 만듭니다. 이 장치는 각 도구가 문서로 밝힌 hook이나 권한 규칙을 씁니다. Claude Code,
-Codex, agy는 hook을, OpenCode는 권한 규칙을 씁니다. hook에는 Python 3가 필요합니다. 설치
-방법은 `INSTALL.md`에 있고, `python3 guards/test_guard.py`로 확인합니다. OpenCode는
-`guards/opencode-system-policy.sh`로 자기 정책을 시스템 설정에도 설치할 수 있습니다. 이
-스크립트는 root 권한으로 실행해야 합니다.
+Codex, agy는 hook을, OpenCode는 권한 규칙과 정책을 씁니다. hook에는 Python 3가 필요합니다.
+설치 방법은 `INSTALL.md`에 있고, `python3 guards/test_guard.py`로 확인합니다. root 권한으로
+`guards/opencode-system-policy.sh`를 실행하면 OpenCode 정책을 시스템 설정에도 복사할 수 있습니다.
 
 ## 유지 관리
 

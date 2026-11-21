@@ -95,53 +95,66 @@ The rules are text. The guard makes a tool refuse a tool call that names a
 credential or that searches, copies or archives the whole home directory
 (Rule SECRET-1). It also makes the tool ask the user before a call changes
 the guard or the hook settings, or turns hooks off. It works only through
-the pre-tool hook or the permission rules that the tool's official
-documentation describes. Start only when the user asks for the guard.
+the pre-tool hook, or for OpenCode through its permission rules and
+policies, as the tool's official documentation describes. Start only when
+the user asks for the guard.
 
 1. Find your tool in the table below. If it is not in the table, or its
    current documentation describes no pre-tool hook and no permission
    rules, tell the user that the guard is not available for it, and stop.
-2. For a tool with a hook, find the real path of a Python 3 interpreter:
-   run `python3 -c "import os, sys; print(os.path.realpath(sys.executable),
-   sys.prefix == sys.base_prefix)"` (on Windows, also try `py -3` and
-   `python`). Use the printed path only when the second value
-   is `True` and the path is not a shim of a version manager (pyenv, asdf,
-   mise) or a project virtual environment, because those can change or
-   vanish. If the printed path names a minor version (for example
-   `/usr/bin/python3.14`) and an unversioned name in the same directory
-   (`/usr/bin/python3`) resolves to the same file, use the unversioned
-   name: a package upgrade removes the versioned file but keeps that name.
-   On Windows, run `icacls` on the interpreter's directory, and skip an
-   interpreter whose directory grants write or modify access to
-   `Everyone`, `Users` or `Authenticated Users`: any program of any
-   account could then replace it and turn the guard off. A directory
-   created directly under `C:\`, such as `C:\Python314`, inherits such
-   access from the drive root. The interpreter's directory on Windows
-   usually names its version, so tell the user that the hook stops
-   working when that version is removed.
-   If no such interpreter exists, tell the user that the guard needs
-   Python 3, and stop. Claude Code also needs version 2.1.295 or later for
-   `onFailure`.
+2. For a tool with a hook, pick the plain command name that starts
+   Python 3, so that the hook keeps working when Python is upgraded or
+   reinstalled. Try `python3`, then `python`, and on Windows also `py`. A
+   name qualifies when the following command prints `3`:
+   `<name> -c "import sys; print(sys.version_info[0])"`. The hook then
+   starts whatever that name finds on `PATH`. `command -v <name>` (on
+   Windows `where <name>`) shows the file that the name finds, and
+   `<name> -c "import sys; print(sys.executable)"` shows the interpreter
+   that it starts. If the file is a shim of a version manager (pyenv,
+   asdf, mise) or lies in a project virtual environment, use the absolute
+   path of the system's unversioned interpreter instead (for example
+   `/usr/bin/python3`): a shim can fail in a directory that pins another
+   version. On Windows, run `icacls` on the interpreter's directory, and
+   prefer a name whose interpreter directory grants no write or modify
+   access to `Everyone`, `Users` or `Authenticated Users`: through such a
+   directory any program of any account can replace the interpreter and
+   turn the guard off. A directory created directly under `C:\`, such as
+   `C:\Python314`, inherits such access from the drive root. If every name
+   leads to such a directory, tell the user. If no name starts Python 3,
+   tell the user that the guard needs Python 3, and stop. Claude Code also
+   needs version 2.1.295 or later for `onFailure`.
 3. For a tool with a hook, copy `guards/guard.py` byte for byte to the
    guard location in the table. If your tool or its sandbox refuses that
    write, stop before step 4: a hook that points to a missing script
    blocks every tool call in Claude Code and may silently do nothing in
    other tools. Give the user the copy command for a terminal outside the
    tool, and continue only after the user has run it.
-4. In the tool's fragment, replace `<python3>` with the interpreter path from
-   step 2 and `<home>` with the absolute path of the user's home directory.
-   Write `/` instead of `\` in both paths, also on Windows. The Claude Code
-   fragment uses exec form (`args`): Claude Code starts the interpreter
-   without a shell, so the entry needs no quotes and works the same with or
-   without Git Bash on Windows. In the other fragments, keep the quotes
-   around both paths, and if your tool runs hook commands through
-   PowerShell, put `&` and a space before the quoted interpreter path. Then
-   merge the fragment into the configuration file. Add the fragment's
-   entries next to the existing ones. NEVER remove or change an existing
-   entry. If the file already holds other content, show the user the exact
-   addition and wait for approval. Keep the original content, and restore
-   it if the merged file does not parse as JSON (JSONC for OpenCode).
-5. Verify the guard:
+4. In the tool's fragment, replace `<python3>` with the command from step 2
+   and `<home>` with the absolute path of the user's home directory. Write
+   `/` instead of `\` in paths, also on Windows. The Claude Code fragment
+   uses exec form (`args`): Claude Code starts the command without a shell,
+   so the entry needs no quotes and works the same with or without Git
+   Bash on Windows. In the other fragments, keep the quotes around both
+   values, and if your tool runs hook commands through PowerShell, put `&`
+   and a space before the quoted command. Then merge the fragment into the
+   configuration file. Add the fragment's entries next to the existing
+   ones. NEVER remove or change an existing entry. If the file already
+   holds other content, show the user the exact addition and wait for
+   approval. Keep the original content, and restore it if the merged file
+   does not parse as JSON (JSONC for OpenCode).
+5. For OpenCode, the fragment also holds policies. Once merged, they
+   already apply, and no project file can lift them, because OpenCode
+   evaluates policies from broader files last. An agent that runs as the
+   user can still edit the user's file. To keep the policies where such an
+   agent cannot change them, offer to copy them into the system file,
+   which only root can change. Give the user
+   `sudo bash guards/opencode-system-policy.sh` to run in a terminal
+   outside the tool, and wait until the user has run it. The script
+   supports Linux and macOS. It backs up the system file, keeps its
+   settings and policies, appends the missing policies, and validates the
+   result. On Windows, OpenCode reads the system file from
+   `%ProgramData%\opencode`, and the script does not set it up there.
+6. Verify the guard:
    - `python3 guards/test_guard.py <installed guard>` reports no failure.
    - The SHA-256 of the installed guard equals that of `guards/guard.py`.
    - `python3 guards/test_guard.py --hook <claude|codex|agy>` reports no
@@ -152,8 +165,10 @@ documentation describes. Start only when the user asks for the guard.
      opened. If your tool runs a shell-form hook through a different shell
      (for example PowerShell on Windows), also run the command there.
    - For OpenCode, read the merged file back and confirm that it holds
-     every rule of the fragment.
-6. Report the locations, both SHA-256 values and the test results. For
+     every rule and every policy of the fragment. Read the system file
+     back the same way if the user ran the script. In a new OpenCode
+     session, confirm that a tool call that names a credential is denied.
+7. Report the locations, both SHA-256 values and the test results. For
    Codex, ask the user to open `/hooks` in Codex and trust the new hook:
    Codex skips a new hook until the user trusts it.
 
@@ -162,7 +177,7 @@ documentation describes. Start only when the user asks for the guard.
 | Claude Code | `~/.claude/hooks/ai-global-config-guard.py` | `~/.claude/settings.json` | `guards/claude-settings.json` |
 | Codex CLI | `~/.codex/hooks/ai-global-config-guard.py` | `~/.codex/hooks.json` | `guards/codex-hooks.json` |
 | Antigravity CLI (agy) | `~/.gemini/config/hooks/ai-global-config-guard.py` | `~/.gemini/config/hooks.json` | `guards/agy-hooks.json` |
-| OpenCode | none: permission rules only | `~/.config/opencode/opencode.jsonc` | `guards/opencode-permissions.json` |
+| OpenCode | none: permission rules and policies | `~/.config/opencode/opencode.jsonc`; with root, also the system file | `guards/opencode-permissions.json` |
 
 The guard catches mistakes and common attempts. It is not a complete
 security boundary:
@@ -204,9 +219,11 @@ security boundary:
   `onFailure: "block"`, a deleted or broken guard script or a removed
   interpreter blocks every tool call until the user fixes or removes the
   hook entry by hand.
-- The guard does not protect its interpreter. When the user's own account
-  can change the interpreter's files, for example in a per-user install
-  under `AppData` on Windows, an agent can turn the guard off through them.
+- The guard does not protect its interpreter. A hook that names a command
+  starts the first interpreter that the name finds on `PATH`. When the
+  user's own account can change that interpreter's files (for example in
+  a per-user install under `AppData` on Windows) or the `PATH` that the
+  tool inherits, an agent can turn the guard off through them.
 - Codex has no "ask" decision, so the guard blocks a change to its own
   files instead of asking. Codex may run a tool when its hook fails, times
   out or answers in a wrong format. Input sent later to a running terminal
@@ -222,28 +239,19 @@ security boundary:
   prompts of agy.
 - OpenCode permission rules match the whole command text, so they are
   coarser than the hook. A rule loaded later (an agent's or a project's)
-  can allow a path again, because the last matching rule wins. Versions
-  before V2 read a `permission` key instead of `permissions`, so on those
-  versions the fragment does nothing. For the `grep` action the resource is
-  the search pattern, not the path, so a rule blocks a pattern that
-  contains such a name but not a search inside such a directory.
+  can allow a path again, because the last matching rule wins. The
+  fragment's policies close that gap: OpenCode evaluates policies from
+  broader files last, a denying policy also overrides an "Allow always"
+  approval, and an allowing policy only lifts an earlier deny. Policies
+  cannot ask, so the rules that ask before an edit of OpenCode's own
+  settings stay permission rules. Versions before V2 read a `permission`
+  key instead of `permissions`, so on those versions the permission rules
+  do nothing, and releases that read policies only from
+  `experimental.policies` ignore the policies. For the `grep` action the
+  resource is the search pattern, not the path, so a rule blocks a
+  pattern that contains such a name but not a search inside such a
+  directory.
 
 Test case 23 checks that the agent does not read a decoy credential on its
 own. Test case 24 checks whether the guard really blocks a read that the
 user authorized.
-
-## Install the OpenCode system policy (optional)
-
-OpenCode also supports policies in its system configuration. A policy can
-hard-deny a permission check after permissions and saved approvals run, and
-a project cannot override it. This is stronger than the permission rules in
-the guard. Start only when the user asks for it.
-
-1. Confirm that `~/.config/opencode/opencode.jsonc` has the `policies` array
-   copied from the guard step above. Stop when it is absent.
-2. Run `guards/opencode-system-policy.sh` with root privileges. The script
-   defaults to the system configuration path for Linux or macOS. Pass
-   `--dst FILE` for another path. It backs up an existing destination file,
-   keeps its content, merges the source policies, and validates the JSON.
-3. Run `opencode reload`. From a new session, confirm that a named credential
-   is still denied.
