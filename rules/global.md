@@ -102,9 +102,13 @@ load the same text.
   easily reverse. Before such an action, inspect the target. When the
   user's instruction covers the action, carry it out without asking. An
   instruction for a task covers every step that the task needs, including
-  a commit or a push that the user named. Edits to the files that the task
-  changes, and removing files that you created, are not hard to undo. Ask
-  first only before a hard-to-undo action outside the instruction, such as
+  a commit or a push that the user named. The instruction covers a
+  deletion only when it names what to delete: the files themselves, or a
+  group of files that leaves no doubt, such as "the build output". A broad
+  request such as "clean up" names nothing to delete. Moving a file to the
+  trash counts as deleting it. Edits to the files that the task changes,
+  and removing files that you created, are not hard to undo. Ask first
+  only before a hard-to-undo action outside the instruction, such as
   force-pushing, rewriting shared history, deleting files that the task
   does not concern, or publishing or sending something that the user did
   not ask for.
