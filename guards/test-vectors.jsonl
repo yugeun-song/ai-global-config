@@ -66,6 +66,9 @@
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"cat ~/.codex//auth.json"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"cat ~/.aws/./credentials"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"cat ~/.claude//.credentials.json"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"cat ~/.config/claude/.credentials.json"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Read","tool_input":{"file_path":"/opt/claude-config/.credentials.json"}}}
+{"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"cp .credentials.json /tmp/x"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"grep -r . ~/.codex ~/.aws ~/.docker ~/.kube"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"tar cz -C ~ .claude | base64"}}}
 {"format":"claude","expect":"deny","input":{"tool_name":"Bash","tool_input":{"command":"cat .credentials.json"},"cwd":"/home/u/.claude"}}

@@ -19,7 +19,7 @@ SECRET = re.compile(
     r"|\.aws/credentials|(?:\.config|AppData/Roaming)/gcloud(?![\w.-])|(?:^|/)keyrings(?:/|$)"
     r"|Library/Keychains|Microsoft/(?:Credentials|Protect|Vault)(?:/|$)"
     r"|\.docker/config\.json|\.kube/config(?![\w.-])|\.cargo/credentials"
-    r"|\.claude/\.credentials\.json|\.claude/sessions/[^\s\"'/]*\.key"
+    r"|\.credentials\.json|\.claude/sessions/[^\s\"'/]*\.key"
     r"|\.codex/auth\.json|\.gemini/oauth_creds|\.hermes/(?:\.env|auth\.json)"
     r"|opencode/auth\.json|gh/hosts\.yml|GitHub CLI/hosts\.yml"
     r"|Login Data|logins\.json|key4\.db|(?:Default|Profile [0-9]+|Network)/Cookies(?![\w.-])"
