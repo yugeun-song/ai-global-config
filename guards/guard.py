@@ -24,6 +24,10 @@ SECRET = re.compile(
     r"|opencode/auth\.json|gh/hosts\.yml|GitHub CLI/hosts\.yml"
     r"|Login Data|logins\.json|key4\.db|(?:Default|Profile [0-9]+|Network)/Cookies(?![\w.-])"
     r"|(?:^|/)Local State(?![\w.-])|cookies\.sqlite"
+    r"|(?<![\w-])containers/auth\.json|(?<![\w-])gem/credentials(?![\w.-])|(?<![\w-])composer/auth\.json"
+    r"|(?:^|/)etc/(?:g?shadow|master\.passwd)(?!\w)|ssh_host_(?:\w+_)?key(?![\w.-])|(?:^|/)kwalletd(?:/|$)"
+    r"|\bHK(?:LM|EY_LOCAL_MACHINE):?[\\/]+(?:SAM|SECURITY)(?!\w)"
+    r"|System32[\\/]+config[\\/]+(?:RegBack[\\/]+)?(?:SAM|SECURITY)(?![\w.-])"
     r"|\bsecret-tool\b|\bkwallet-query\b|\bcmdkey\b|\bvaultcmd\b|Get-StoredCredential|\bGet-Secret\b|\bPasswordVault\b"
     r"|\bgh\s+auth\s+token\b|\bsecurity\s+(?:find-(?:generic|internet)-password|dump-keychain)\b"
     r"|\bgcloud\s+auth\s+(?:application-default\s+)?print-(?:access|identity)-token\b"
@@ -74,7 +78,8 @@ PROTECTED = re.compile(
     r"|\.gemini/settings\.json|\.gemini/hooks(?:/|$)"
     r"|\.config/opencode/opencode\.jsonc?|(?:^|/)opencode\.jsonc?$|(?:^|/)\.opencode/"
     r"|\.claude/(?:skills|agents|plugins)/|(?:^|/)\.agents/hooks\.json|\.codex/plugins/|/etc/codex/"
-    r"|\.codex/requirements\.toml|disableAllHooks",
+    r"|\.codex/requirements\.toml|disableAllHooks"
+    r"|(?<![\w.-])ClaudeCode/(?:managed-settings|hooks(?:/|$))|(?:^|/)etc/claude-code(?:/|$)",
     re.IGNORECASE,
 )
 EXISTENCE_ONLY = re.compile(r"^\s*(?:ls|stat|test|\[|Test-Path|Get-Item)\s[^;&|`$()<>\r\n]*\Z", re.IGNORECASE)
