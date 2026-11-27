@@ -33,7 +33,11 @@ keep working after the clone is deleted.
 | `rules/global.md` | the rules: How to read this file, Part 1 (hard rules), Part 2 (defaults) |
 | `rules/parts/` | the same rules cut into one file per section, for tools that cap the size of a rule file |
 | `INSTALL.md` | how an agent installs or updates the rules |
-| `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | short pointers for agents that work in this repository |
+| `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | the fixed entry text that every repository carries; it imports `docs/agent-guide.md` and `docs/agent-rules.md` |
+| `docs/agent-guide.md` | what an agent must know about this repository |
+| `docs/agent-rules.md` | the original of the shared project rules that the user's other repositories copy |
+| `scripts/agent-artifacts.gitignore` | the paths of AI tool files that those repositories list in `.gitignore` |
+| `scripts/check-agent-files.py` | checks the agent instruction files of this repository |
 | `guards/` | the optional guard: one Python 3 script and a configuration fragment per tool, plus helper scripts for OpenCode system policy and agy permissions |
 | `tests/` | test cases and their runner |
 | `ko/` | Korean translations with the same content, for Korean readers |
@@ -79,11 +83,49 @@ also go into the managed settings of Claude Code, and
 system configuration. `guards/agy-permissions.sh` turns off the approval
 prompts of Antigravity CLI and leaves the checks to the guard.
 
+## Shared project rules
+
+The user's other repositories share these files with this repository:
+
+- `AGENTS.md`, `CLAUDE.md` and `GEMINI.md` hold one fixed text, the same
+  in every repository, because each tool loads a different file name.
+  The text tells an agent to read `docs/agent-rules.md`,
+  `docs/agent-guide.md` and, when it exists, `README.md` before a task.
+  It imports the first two with `@` lines, which Claude Code, Gemini CLI
+  and Copilot CLI expand when a session starts. Other tools read the
+  files because the text tells them to. `README.md` is not imported,
+  because a long one would fill the context of every session.
+- `docs/agent-rules.md` holds the rules that apply in every repository.
+  Each repository carries a byte-identical copy, so the rules reach every
+  agent that works there, including an agent that has not installed
+  `rules/global.md`.
+- The `.gitignore` of each repository lists every pattern in
+  `scripts/agent-artifacts.gitignore`: the settings, state, caches and
+  tool-specific instruction files that AI tools create in a repository.
+
+What concerns one repository alone goes into its own
+`docs/agent-guide.md`. This repository holds the originals of the shared
+files. No tool checks the copies in the other repositories.
+
+`scripts/check-agent-files.py` checks this repository only. It needs
+Python 3.6 or later:
+
+```text
+python3 scripts/check-agent-files.py
+```
+
+It fails when the three entry files differ, when one of them does not
+import `docs/agent-rules.md` and `docs/agent-guide.md`, when one of these
+files is missing or hidden by a `.gitignore` rule, or when `.gitignore`
+lacks a pattern of `scripts/agent-artifacts.gitignore`. No CI runs it, so
+a failed check sends no notification.
+
 ## Maintenance
 
 - `rules/global.md` is the source. After every change to it, cut
-  `rules/parts/` again in the same commit, as `AGENTS.md` describes. The
-  parts joined in name order must equal `rules/global.md` byte for byte.
+  `rules/parts/` again in the same commit, as `docs/agent-guide.md`
+  describes. The parts joined in name order must equal `rules/global.md`
+  byte for byte.
 - Each file under `ko/` is a Korean translation with the same content as
   its English source. Change the translation in the same commit as its
   source.
@@ -95,6 +137,11 @@ prompts of Antigravity CLI and leaves the checks to the guard.
   that keeps the same behavior, or the closest behavior that the tool still
   supports, and record the change and the reason in the commit message.
   When a new feature offers a better official way, adopt it.
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `docs/agent-rules.md` and
+  `scripts/agent-artifacts.gitignore` are the originals of what the
+  user's other repositories share. After a change, copy the first four
+  byte for byte over each repository's copies, add new patterns to each
+  repository's `.gitignore`, and run `scripts/check-agent-files.py` here.
 - Commit and push only on the user's instruction.
 
 ## Tests

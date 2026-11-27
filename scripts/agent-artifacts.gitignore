@@ -1,0 +1,54 @@
+# Paths that AI coding tools create or read in a repository, other than the
+# shared instructions: AGENTS.md, CLAUDE.md, GEMINI.md and docs/agent-*.md.
+# Every repository that carries docs/agent-rules.md lists each pattern below
+# in its .gitignore. check-agent-files.py checks this repository's .gitignore.
+
+# Settings, state, caches and history
+.agent/
+.agents/
+.aider*
+.augment/
+.claude/
+.cline/
+.codeium/
+.codex/
+.continue/
+.crush/
+.cursor/
+.devin/
+.factory/
+.gemini/
+.junie/
+.kiro/
+.mcp.json
+.opencode/
+.qwen/
+.roo/
+.roomodes
+.serena/
+.specstory/
+.windsurf/
+_agent/
+_agents/
+opencode.json
+opencode.jsonc
+
+# Personal overrides and tool-specific instruction files
+.clinerules
+.cursorrules
+.github/copilot-instructions.md
+.github/instructions/
+.goosehints
+.hermes.md
+.roorules*
+.rules
+.windsurfrules
+AGENT.md
+AGENTS.local.md
+AGENTS.override.md
+CLAUDE.local.md
+CRUSH.local.md
+CRUSH.md
+HERMES.md
+QWEN.md
+WARP.md

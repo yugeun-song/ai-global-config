@@ -31,7 +31,11 @@
 | `rules/global.md` | 규칙: 읽는 법, 1부(강제 규칙), 2부(기본값) |
 | `rules/parts/` | 같은 규칙을 절마다 한 파일로 자른 것. 규칙 파일 크기를 제한하는 도구용 |
 | `INSTALL.md` | 에이전트가 규칙을 설치하거나 갱신하는 방법 |
-| `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | 이 저장소에서 일하는 에이전트를 위한 짧은 안내 |
+| `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | 모든 저장소가 똑같이 두는 고정 진입 글. `docs/agent-guide.md`와 `docs/agent-rules.md`를 import함 |
+| `docs/agent-guide.md` | 에이전트가 이 저장소에 대해 알아야 할 내용 |
+| `docs/agent-rules.md` | 사용자의 다른 저장소가 복사해 두는 공용 프로젝트 규칙의 원본 |
+| `scripts/agent-artifacts.gitignore` | 그 저장소들이 `.gitignore`에 적는 AI 도구 파일 경로 |
+| `scripts/check-agent-files.py` | 이 저장소의 에이전트 지침 파일을 검사하는 스크립트 |
 | `guards/` | 선택 사항인 강제 장치: Python 3 스크립트 하나와 도구별 설정 조각, 그리고 OpenCode 시스템 정책·agy 권한 보조 스크립트 |
 | `tests/` | 테스트 사례와 실행기 |
 | `ko/` | 한국어 화자를 위한, 내용이 같은 한국어 번역 |
@@ -72,11 +76,41 @@ Python 3.6 이상이 필요합니다. 설치 방법은 `INSTALL.md`에 있고, `
 OpenCode 정책을 시스템 설정에 복사할 수 있습니다. `guards/agy-permissions.sh`는 Antigravity CLI의
 승인 확인 창을 끄고 검사를 강제 장치에 맡깁니다.
 
+## 공용 프로젝트 규칙
+
+사용자의 다른 저장소는 다음 파일을 이 저장소와 함께 씁니다.
+
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`에는 모든 저장소에서 같은 고정 글이 있습니다. 도구마다
+  읽는 파일 이름이 다르기 때문입니다. 이 글은 작업 전에 `docs/agent-rules.md`,
+  `docs/agent-guide.md`, 그리고 있으면 `README.md`를 읽으라고 지시합니다. 앞의 두 파일은 `@`
+  줄로 import하며, Claude Code, Gemini CLI, Copilot CLI는 세션을 시작할 때 이 import를 펼칩니다.
+  다른 도구는 글의 지시를 따라 그 파일을 읽습니다. `README.md`는 import하지 않습니다.
+  import하면 세션마다 README 전체가 컨텍스트에 들어가기 때문입니다.
+- `docs/agent-rules.md`에는 모든 저장소에 적용되는 규칙이 있습니다. 저장소마다 바이트 단위로 같은
+  사본을 두므로, 이 규칙은 `rules/global.md`를 설치하지 않은 에이전트를 포함해 그 저장소에서
+  일하는 모든 에이전트에게 전달됩니다.
+- 각 저장소의 `.gitignore`에는 `scripts/agent-artifacts.gitignore`의 패턴이 모두 있습니다. 이
+  패턴은 AI 도구가 저장소 안에 만드는 설정, 상태, 캐시, 도구 전용 지침 파일을 가리킵니다.
+
+한 저장소에만 해당하는 내용은 그 저장소의 `docs/agent-guide.md`에 둡니다. 공용 파일의 원본은 이
+저장소에 있습니다. 다른 저장소의 사본은 어떤 도구도 검사하지 않습니다.
+
+`scripts/check-agent-files.py`는 이 저장소만 검사합니다. Python 3.6 이상이 필요합니다.
+
+```text
+python3 scripts/check-agent-files.py
+```
+
+진입 파일 세 개가 서로 다를 때, 그중 하나가 `docs/agent-rules.md`와 `docs/agent-guide.md`를
+import하지 않을 때, 이 파일 가운데 하나가 없거나 `.gitignore` 규칙에 가려질 때, `.gitignore`에
+`scripts/agent-artifacts.gitignore`의 패턴이 빠졌을 때 실패합니다. CI가 이 스크립트를 실행하지
+않으므로, 검사가 실패해도 알림이 가지 않습니다.
+
 ## 유지 관리
 
-- `rules/global.md`가 원본입니다. 이 파일을 바꿀 때마다 같은 commit에서 `AGENTS.md`가 설명하는
-  대로 `rules/parts/`를 다시 자릅니다. 조각을 이름 순서로 이어 붙이면 `rules/global.md`와
-  바이트 단위로 같아야 합니다.
+- `rules/global.md`가 원본입니다. 이 파일을 바꿀 때마다 같은 commit에서
+  `docs/agent-guide.md`가 설명하는 대로 `rules/parts/`를 다시 자릅니다. 조각을 이름 순서로
+  이어 붙이면 `rules/global.md`와 바이트 단위로 같아야 합니다.
 - `ko/` 아래의 각 파일은 영문 원본과 내용이 같은 한국어 번역입니다. 번역은 원본과 같은
   commit에서 고칩니다.
 - 도구는 바뀝니다. 도구가 업데이트되어 이 저장소가 기대는 기능(지침 위치, hook이나 권한 형식,
@@ -84,6 +118,10 @@ OpenCode 정책을 시스템 설정에 복사할 수 있습니다. `guards/agy-p
   공식 문서를 확인하고 해당 부분을 추가, 수정, 삭제합니다. 기능이 사라지면 같은 동작을, 안 되면
   그 도구가 아직 지원하는 가장 가까운 동작을 내는 대체 로직을 만들고, 무엇을 왜 바꿨는지 commit
   메시지에 남깁니다. 새 기능이 더 나은 공식 방법을 제공하면 그 방법으로 바꿉니다.
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `docs/agent-rules.md`, `scripts/agent-artifacts.gitignore`는
+  사용자의 다른 저장소가 나눠 쓰는 내용의 원본입니다. 바꾼 뒤에는 앞의 네 파일을 각 저장소의 사본
+  위에 바이트 그대로 복사하고, 새 패턴을 각 저장소의 `.gitignore`에 추가한 다음, 여기서
+  `scripts/check-agent-files.py`를 실행합니다.
 - commit과 push는 사용자가 지시할 때만 합니다.
 
 ## 테스트

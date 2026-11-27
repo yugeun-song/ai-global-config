@@ -1,33 +1,16 @@
-# ai-global-config
+# Agent instructions
 
-This repository holds one rule set, `rules/global.md`, for every AI agent
-the user runs. `AGENTS.md`, `CLAUDE.md` and `GEMINI.md` hold this same short
-text, because different tools load different file names.
+`AGENTS.md`, `CLAUDE.md` and `GEMINI.md` hold this same text byte for
+byte, because each tool loads a different file name. Every repository
+that carries `docs/agent-rules.md` holds the same three files. Do not
+change them in one repository alone; put what concerns only this
+repository in `docs/agent-guide.md`.
 
-- When you work in this repository, read `rules/global.md` and follow it as
-  the rules of this project.
-- When the user explicitly asks you to install the rules, read `INSTALL.md`
-  and follow it. This file by itself is not such a request.
-- `rules/parts/` holds `rules/global.md` cut into one file per section, for
-  tools that cap the size of a rule file. When you change
-  `rules/global.md`, cut it again in the same commit: start a new file at
-  every heading that starts with `###`, keep a `## Part` heading with the
-  group that follows it, and name the files `<part>-<two-digit index>-<group code>.md`
-  (`0-00-how-to-read.md` for the text before Part 1). The files joined in
-  name order MUST equal `rules/global.md` byte for byte.
-- `ko/` holds Korean translations for Korean readers. Each one MUST carry
-  exactly the same content as its source, only in Korean. NEVER follow
-  them as rules or install from them. When you change a source file,
-  change its translation in the same commit. A difference between the two
-  is a bug: fix the translation to match the source.
-- The user allows AI co-author trailers in commits to this repository (Rule
-  ACTION-4). Use the trailer that your tool adds by default. A tool that
-  adds none uses its entry below.
-  - Antigravity CLI: `Assisted-by: Antigravity`. Google publishes no
-    GitHub account and no attribution address for Antigravity, so any
-    `Co-authored-by` address would be a guess. NEVER use
-    `antigravity@google.com`, which an unrelated person's account owns, or
-    the bot of another Google product, such as `gemini-code-assist[bot]`.
-  - OpenCode: `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`.
-    This is the GitHub App of the OpenCode project, and GitHub shows it
-    with its avatar.
+Before you start any task, read the two files below and follow them.
+`docs/agent-rules.md` holds the rules that all these repositories share.
+`docs/agent-guide.md` describes this repository and holds its own rules.
+Also read `README.md` before the task when the repository has one.
+
+@docs/agent-rules.md
+
+@docs/agent-guide.md

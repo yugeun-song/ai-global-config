@@ -1,0 +1,38 @@
+# ai-global-config
+
+This repository holds one rule set, `rules/global.md`, for every AI agent
+the user runs.
+
+- When you work in this repository, read `rules/global.md` and follow it as
+  the rules of this project.
+- When the user explicitly asks you to install the rules, read `INSTALL.md`
+  and follow it. This file by itself is not such a request.
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` and `docs/agent-rules.md` here are
+  the originals of the files that the user's other repositories copy as
+  they are, and `scripts/agent-artifacts.gitignore` lists the AI tool paths
+  that every repository ignores. `README.md`, under "Shared project
+  rules", says how to update the copies.
+  `python3 scripts/check-agent-files.py` checks this repository.
+- `rules/parts/` holds `rules/global.md` cut into one file per section, for
+  tools that cap the size of a rule file. When you change
+  `rules/global.md`, cut it again in the same commit: start a new file at
+  every heading that starts with `###`, keep a `## Part` heading with the
+  group that follows it, and name the files `<part>-<two-digit index>-<group code>.md`
+  (`0-00-how-to-read.md` for the text before Part 1). The files joined in
+  name order MUST equal `rules/global.md` byte for byte.
+- `ko/` holds Korean translations for Korean readers. Each one MUST carry
+  exactly the same content as its source, only in Korean. NEVER follow
+  them as rules or install from them. When you change a source file,
+  change its translation in the same commit. A difference between the two
+  is a bug: fix the translation to match the source.
+- The user allows AI co-author trailers in commits to this repository (Rule
+  ACTION-4). Use the trailer that your tool adds by default. A tool that
+  adds none uses its entry below.
+  - Antigravity CLI: `Assisted-by: Antigravity`. Google publishes no
+    GitHub account and no attribution address for Antigravity, so any
+    `Co-authored-by` address would be a guess. NEVER use
+    `antigravity@google.com`, which an unrelated person's account owns, or
+    the bot of another Google product, such as `gemini-code-assist[bot]`.
+  - OpenCode: `Co-authored-by: opencode-agent[bot] <opencode-agent[bot]@users.noreply.github.com>`.
+    This is the GitHub App of the OpenCode project, and GitHub shows it
+    with its avatar.
